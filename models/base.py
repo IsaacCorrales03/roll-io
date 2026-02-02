@@ -1,3 +1,6 @@
+# El archivo base.py contiene las plantillas / clases abstractas para el funcionamiento general
+# del sistema
+
 from abc import ABC, abstractmethod
 from typing import List, Callable, Optional
 import random
@@ -32,6 +35,9 @@ class GameEvent(BaseEntity, ABC):
         pass
 
 class ClassFeature(ABC):
+    """
+    Class feature es la clase abstracta que añade las habilidades para cada clase
+    """
     name: str
     description: str
     level: int
@@ -56,6 +62,10 @@ class ClassFeature(ABC):
         pass
 
 class Actor(ABC):
+    """
+    Actor es la clase abstracta para todas las entidades que interactuan y se relacionan con el entorno
+    y otros actores
+    """
     @property
     def con_mod(self) -> int:
         return (self.attributes["CON"] - 10) // 2
@@ -93,7 +103,7 @@ class Actor(ABC):
         pass
 
     def calc_ac(self) -> int:
-    
+        """ Esta función se encarga de calcular y devolver el AC de un actor"""
         ac_candidates = []
 
         # Base AC
@@ -121,51 +131,44 @@ class Actor(ABC):
         return ac
 
     def equip(self, armor=None, weapon=None):
+        """
+        Función para equipar un arma u armadura en un actor
+        """
         if armor:
             self.armor = armor
         if weapon:
             self.weapon = weapon
 
     def roll(self, attribute: str = "", advantage=False, disadvantage=False):
-            # Tirada de d20
-            result = None
-            is_critical = False
-            is_fumble = False
-            # Tirada de d20
-            if advantage:
-                rolls = [random.randint(1, 20) for _ in range(2)]
-                result = max(rolls)
-            elif disadvantage:
-                rolls = [random.randint(1, 20) for _ in range(2)]
-                result = min(rolls)
-            else:
-                result = random.randint(1, 20)
-            is_critical = result == 20
-            is_fumble = result == 1
-            modifier = 0
-            if attribute and attribute in self.attributes:
-                modifier = (self.attributes[attribute] - 10) // 2
-            total = result + modifier
-            return total, result, modifier, is_critical, is_fumble
-        
+        """
+        Realiza una tirada de dado d20 y devuelve el resultado con modificador, el resultado con dado, el modificador, 
+        si fue crítico y si falló 
+        """
+        # Tirada de d20
+        result = None
+        is_critical = False
+        is_fumble = False
+        # Tirada de d20
+        if advantage:
+            rolls = [random.randint(1, 20) for _ in range(2)]
+            result = max(rolls)
+        elif disadvantage:
+            rolls = [random.randint(1, 20) for _ in range(2)]
+            result = min(rolls)
+        else:
+            result = random.randint(1, 20)
+        is_critical = result == 20
+        is_fumble = result == 1
+        modifier = 0
+        if attribute and attribute in self.attributes:
+            modifier = (self.attributes[attribute] - 10) // 2
+        total = result + modifier
+        return total, result, modifier, is_critical, is_fumble
+    
     def damage_roll(self, weapon, critical=False) -> int:
-            total_dice = weapon.dice_count * 2 if critical else weapon.dice_count
-            damage = sum(random.randint(1, weapon.dice_size) for _ in range(total_dice))
-            modifier = (self.attributes[weapon.attribute] - 10) // 2 + weapon.bonus
-            return damage + modifier
+        """Realiza una tirada de daño, que recibe un arma, su dado y el daño que hace, devuelve el daño a realizar"""
+        total_dice = weapon.dice_count * 2 if critical else weapon.dice_count
+        damage = sum(random.randint(1, weapon.dice_size) for _ in range(total_dice))
+        modifier = (self.attributes[weapon.attribute] - 10) // 2 + weapon.bonus
+        return damage + modifier
 
-
-    def apply_bardic_inspiration(self, total: int, attribute: str = "") -> int:
-        """
-        Si el actor tiene un dado de inspiración activo, permite usarlo.
-        Se llama **después de tirar el d20**.
-        """
-        if not self.inspiration_dice:
-            return total  # no hay dado activo
-
-        # Tomamos el primer dado disponible
-        source, info = next(iter(self.inspiration_dice.items()))
-        bonus = random.randint(1, info["die"])
-        del self.inspiration_dice[source]  # el dado se consume al usarlo
-        print(f"{self.name} usa un dado de inspiración: +{bonus}")
-        return total + bonus
