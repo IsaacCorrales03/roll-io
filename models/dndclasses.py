@@ -156,7 +156,7 @@ class Paladin(DnDClass):
         return 10 + actor.dex_mod
 
 class Rogue(DnDClass):
-    name = "Pícaro"
+    name = "Picaro"
     definition = (
         "Especialistas en sigilo, astucia y golpes precisos."
     )
