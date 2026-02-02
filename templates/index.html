@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Campaigns</title>
+    <style>
+        body {
+            font-family: 'Cinzel', serif;
+            background: url('https://i.imgur.com/f0eBz0X.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #f4e4c1;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            background: rgba(30, 20, 10, 0.9);
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px #000;
+        }
+
+        h1 {
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #d4af37;
+        }
+
+        input {
+            padding: 10px;
+            width: 100%;
+            border-radius: 5px;
+            border: none;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #8b0000;
+            border: none;
+            border-radius: 5px;
+            color: #f4e4c1;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #b22222;
+        }
+
+        #players {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .player {
+            padding: 5px;
+            border-bottom: 1px solid #d4af37;
+        }
+
+        .player .name {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .player .status {
+            font-size: 0.9em;
+            color: #f4e4c1;
+        }
+
+        .separator {
+            margin: 30px 0;
+            border-top: 2px solid #d4af37;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>D&D Campaign</h1>
+
+        <input type="text" id="campaign_name" placeholder="Nombre campaña (solo DM)">
+        <button onclick="createCampaign()">Crear Campaña (DM)</button>
+
+        <div class="separator"></div>
+
+        <input type="text" id="campaign_code" placeholder="Código campaña para unirse">
+        <button onclick="joinCampaign()">Unirse a Campaña</button>
+
+        <div id="players"></div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        let socket = null;
+        let campaignCode = null;
+
+        function connectSocket(callback) {
+            if (socket && socket.connected) { 
+                callback(); 
+                return; 
+            }
+
+            socket = io('http://localhost:5000', { 
+                transports: ['websocket', 'polling'] 
+            });
+
+            socket.on('connect', () => { 
+                console.log('✓ Conectado al servidor');
+                callback(); 
+            });
+
+            socket.on('error', data => {
+                alert('Error: ' + data.message);
+            });
+        }
+
+        function createCampaign() {
+            const name = document.getElementById('campaign_name').value.trim();
+            if (!name) {
+                alert('Nombre de campaña requerido');
+                return;
+            }
+
+            connectSocket(() => {
+                socket.emit('create_campaign', { 
+                    username: 'Dungeon Master', 
+                    name: name 
+                });
+
+                socket.once('campaign_created', data => {
+                    const code = data.code;
+                    // Redirigir al lobby con parámetro dm=true
+                    window.location.href = `/lobby?campaign=${code}&dm=true`;
+                });
+            });
+        }
+
+        function joinCampaign() {
+            const code = document.getElementById('campaign_code').value.trim();
+            if (!code) {
+                alert('Código requerido');
+                return;
+            }
+
+            // Redirigir a crear personaje pasando el código de campaña
+            window.location.href = `/create_char?campaign=${code}`;
+        }
+    </script>
+</body>
+
+</html>

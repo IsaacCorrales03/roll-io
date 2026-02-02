@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creador de Personajes - RPG</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>FORJA TU DESTINO</h1>
+            <div class="divider"></div>
+            <p class="subtitle">Creador de Héroes y Leyendas</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Character Creation Card -->
+            <div class="card">
+                <h2 class="card-title">Creación de Personaje</h2>
+
+                <form id="character-form">
+                    <div class="form-group">
+                        <label for="char-name">Nombre del Héroe</label>
+                        <input type="text" id="char-name" placeholder="Ingresa un nombre épico..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Selecciona tu Raza</label>
+                        <div class="selection-grid" id="race-grid">
+                            <div class="selection-option active" data-race="Human">Humano</div>
+                            <div class="selection-option" data-race="Elf">Elfo</div>
+                            <div class="selection-option" data-race="Dwarf">Enano</div>
+                            <div class="selection-option" data-race="DragonBorn">Sangre de Dragón</div>
+                            <div class="selection-option" data-race="Gnome">Gnomo</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Selecciona tu Clase</label>
+                        <div class="selection-grid" id="class-grid">
+                            <div class="selection-option active" data-class="Barbaro">Bárbaro</div>
+                            <div class="selection-option" data-class="Bardo">Bardo</div>
+                            <div class="selection-option" data-class="Brujo">Brujo</div>
+                            <div class="selection-option" data-class="Clerigo">Clérigo</div>
+                            <div class="selection-option" data-class="Druida">Druida</div>
+                            <div class="selection-option" data-class="Explorador">Explorador</div>
+                            <div class="selection-option" data-class="Guerrero">Guerrero</div>
+                            <div class="selection-option" data-class="Hechicero">Hechicero</div>
+                            <div class="selection-option" data-class="Mago">Mago</div>
+                            <div class="selection-option" data-class="Monje">Monje</div>
+                            <div class="selection-option" data-class="Paladin">Paladín</div>
+                            <div class="selection-option" data-class="Picaro">Pícaro</div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="create-button">
+                        <span style="position: relative; z-index: 1;">Crear Héroe</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Race Info Card -->
+            <div class="card info-panel" id="race-info">
+                <h2 class="card-title">Información de Raza</h2>
+                <div class="placeholder">Selecciona una raza para descubrir sus atributos</div>
+            </div>
+
+            <!-- Class Info Card -->
+            <div class="card info-panel" id="class-info">
+                <h2 class="card-title">Información de Clase</h2>
+                <div class="placeholder">Selecciona una clase para descubrir sus habilidades</div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <h2 class="card-title">Cargar Personaje</h2>
+
+        <div class="form-group">
+            <label for="load-id">UUID del Personaje</label>
+            <input type="text" id="load-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+        </div>
+
+        <button id="load-button" class="create-button">
+            <span style="position: relative; z-index: 1;">Cargar Personaje</span>
+        </button>
+    </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/script.js"></script>
+</body>
+
+</html>

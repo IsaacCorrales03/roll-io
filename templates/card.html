@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha de Personaje - D&D</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Uncial+Antiqua&family=MedievalSharp&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Cinzel', serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #e8dcc4;
+            padding: 20px;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255, 215, 0, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(139, 69, 19, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .parchment-bg {
+            position: relative;
+            max-width: 1000px;
+            margin: auto;
+            background: linear-gradient(to bottom, #f4e7d7 0%, #e8dcc4 50%, #d4c5a9 100%);
+            padding: 40px;
+            border-radius: 4px;
+            box-shadow: 
+                0 0 0 8px #8b4513,
+                0 0 0 12px #654321,
+                0 20px 60px rgba(0, 0, 0, 0.7),
+                inset 0 0 100px rgba(139, 69, 19, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .parchment-bg::before,
+        .parchment-bg::after {
+            content: '';
+            position: absolute;
+            background: #654321;
+        }
+        
+        .parchment-bg::before {
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            height: 8px;
+            border-radius: 4px 4px 0 0;
+        }
+        
+        .parchment-bg::after {
+            bottom: -4px;
+            left: -4px;
+            right: -4px;
+            height: 8px;
+            border-radius: 0 0 4px 4px;
+        }
+        
+        .corner-ornament {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 3px solid #8b4513;
+        }
+        
+        .corner-ornament.top-left {
+            top: 15px;
+            left: 15px;
+            border-right: none;
+            border-bottom: none;
+        }
+        
+        .corner-ornament.top-right {
+            top: 15px;
+            right: 15px;
+            border-left: none;
+            border-bottom: none;
+        }
+        
+        .corner-ornament.bottom-left {
+            bottom: 15px;
+            left: 15px;
+            border-right: none;
+            border-top: none;
+        }
+        
+        .corner-ornament.bottom-right {
+            bottom: 15px;
+            right: 15px;
+            border-left: none;
+            border-top: none;
+        }
+        
+        h1 {
+            font-family: 'Uncial Antiqua', cursive;
+            font-size: 3em;
+            text-align: center;
+            color: #8b0000;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        
+        h2 {
+            font-family: 'MedievalSharp', cursive;
+            font-size: 1.8em;
+            color: #654321;
+            border-bottom: 3px solid #8b4513;
+            padding-bottom: 8px;
+            margin: 25px 0 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+        }
+        
+        h2::after {
+            content: '⚔';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8b0000;
+            font-size: 1.2em;
+        }
+        
+        h3 {
+            font-size: 1.3em;
+            color: #5a4a3a;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 400;
+        }
+        
+        .uuid-display {
+            text-align: center;
+            font-size: 0.9em;
+            color: #8b7355;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .box {
+            background: linear-gradient(135deg, #f9f3e8 0%, #ede1c8 100%);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #8b6f47;
+            box-shadow: 
+                0 4px 8px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(to right, transparent, #8b4513, transparent);
+        }
+        
+        .box strong {
+            display: block;
+            color: #8b4513;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        .box-value {
+            font-size: 1.4em;
+            color: #2c1810;
+            font-weight: 600;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+        
+        .stat {
+            background: linear-gradient(135deg, #8b0000 0%, #660000 100%);
+            text-align: center;
+            padding: 15px 10px;
+            border-radius: 50%;
+            border: 4px solid #ffd700;
+            box-shadow: 
+                0 4px 12px rgba(0, 0, 0, 0.4),
+                inset 0 2px 4px rgba(255, 255, 255, 0.2);
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        
+        .stat::before {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #8b4513, #654321);
+            z-index: -1;
+        }
+        
+        .stat-name {
+            font-size: 0.7em;
+            color: #ffd700;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            color: #fff;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .race-box, .class-box {
+            background: linear-gradient(135deg, #f4e7d7 0%, #e8dcc4 100%);
+            padding: 20px;
+            border-radius: 8px;
+            border: 3px solid #8b4513;
+            margin: 15px 0;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .race-box h3, .class-box h3 {
+            color: #8b0000;
+            font-size: 1.5em;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+        
+        .race-box p, .class-box p {
+            color: #3a2a1a;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+        
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 12px 0;
+        }
+        
+        ul li {
+            padding: 8px 0 8px 25px;
+            position: relative;
+            color: #3a2a1a;
+            line-height: 1.5;
+        }
+        
+        ul li::before {
+            content: '⚜';
+            position: absolute;
+            left: 0;
+            color: #8b4513;
+            font-weight: bold;
+        }
+        
+        ul li b {
+            color: #8b0000;
+        }
+        
+        .features {
+            background: linear-gradient(135deg, #f9f3e8 0%, #ede1c8 100%);
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #8b6f47;
+            margin-top: 15px;
+        }
+        
+        .features li {
+            background: rgba(255, 255, 255, 0.4);
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #8b4513;
+        }
+        
+        .feature-name {
+            color: #8b0000;
+            font-size: 1.1em;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .feature-level {
+            color: #8b7355;
+            font-size: 0.85em;
+            font-style: italic;
+        }
+        
+        .divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #8b4513, transparent);
+            margin: 30px 0;
+        }
+        
+        .shield-icon {
+            display: inline-block;
+            margin: 0 5px;
+            color: #8b4513;
+        }
+        
+        @media (max-width: 768px) {
+            .grid, .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .parchment-bg {
+                padding: 25px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stats {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="parchment-bg">
+        <div class="corner-ornament top-left"></div>
+        <div class="corner-ornament top-right"></div>
+        <div class="corner-ornament bottom-left"></div>
+        <div class="corner-ornament bottom-right"></div>
+        
+        <div id="sheet"></div>
+    </div>
+    
+    <span id="uuid" style="display:none">{{ character_id }}</span>
+    
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const uuid = params.get("uuid");
+
+        if (!uuid) {
+            document.getElementById('sheet').innerHTML = `
+                <h1>⚠ Error</h1>
+                <p style="text-align:center; color:#8b0000; font-size:1.2em;">UUID no proporcionado en la URL</p>
+            `;
+            throw new Error("UUID no proporcionado");
+        }
+
+        fetch(`/api/character/load?from_id=${uuid}`)
+            .then(r => {
+                if (!r.ok) throw new Error('Error al cargar el personaje');
+                return r.json();
+            })
+            .then(render)
+            .catch(err => {
+                document.getElementById('sheet').innerHTML = `
+                    <h1>⚠ Error</h1>
+                    <p style="text-align:center; color:#8b0000; font-size:1.2em;">No se pudo cargar el personaje: ${err.message}</p>
+                `;
+            });
+
+        function render(character) {
+            const el = document.getElementById('sheet');
+            
+            const attributeModifier = (value) => {
+                const mod = Math.floor((value - 10) / 2);
+                return mod >= 0 ? `+${mod}` : mod;
+            };
+            
+            el.innerHTML = `
+                <h1>⚔ ${character.name} ⚔</h1>
+                <div class="uuid-display">ID: ${character.id}</div>
+                <h3>${character.race.name} <span class="shield-icon">🛡</span> ${character.class.name} <span class="shield-icon">⚔</span> Nivel ${character.level}</h3>
+
+                <div class="divider"></div>
+
+                <div class="grid">
+                    <div class="box">
+                        <strong>❤ Puntos de Vida</strong>
+                        <div class="box-value">${character.hp.current} / ${character.hp.max}</div>
+                    </div>
+                    <div class="box">
+                        <strong>⭐ Bonificador de Competencia</strong>
+                        <div class="box-value">+${character.proficiency_bonus}</div>
+                    </div>
+                    <div class="box">
+                        <strong>💎 Puntos de Experiencia</strong>
+                        <div class="box-value">${character.points}</div>
+                    </div>
+                </div>
+
+                <h2>Atributos</h2>
+                <div class="stats">
+                    ${Object.entries(character.attributes).map(([k, v]) => `
+                        <div class="stat">
+                            <div class="stat-name">${k.substring(0, 3).toUpperCase()}</div>
+                            <div class="stat-value">${v}</div>
+                            <div style="font-size:0.8em; color:#ffd700; margin-top:2px">${attributeModifier(v)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="divider"></div>
+
+                <h2>Raza</h2>
+                <div class="race-box">
+                    <h3>🏰 ${character.race.name}</h3>
+                    <p>${character.race.description}</p>
+                    <ul>
+                        ${Object.entries(character.race.special_traits).map(([k, v]) => `
+                            <li><b>${k}:</b> ${v}</li>
+                        `).join('')}
+                    </ul>
+                </div>
+
+                <h2>Clase</h2>
+                <div class="class-box">
+                    <h3>⚔ ${character.class.name}</h3>
+                    <p><b>Dado de Golpe:</b> d${character.class.hit_die}</p>
+                    <p><b>Competencias con Armas:</b> ${character.class.weapon_proficiencies.join(', ') || 'Ninguna'}</p>
+                </div>
+
+                <div class="divider"></div>
+
+                <h2>Características de Clase</h2>
+                <ul class="features">
+                    ${character.features.map(f => `
+                        <li>
+                            <span class="feature-name">⚡ ${f.name}</span>
+                            <span class="feature-level">(Nivel requerido: ${f.level_required})</span>
+                            <p style="margin-top:8px; color:#3a2a1a;">${f.description}</p>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+        }
+    </script>
+</body>
+</html>

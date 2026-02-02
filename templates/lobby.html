@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Lobby</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Lora&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Lora', serif;
+            background: url('https://i.imgur.com/f0eBz0X.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #f4e4c1;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            background: rgba(30, 20, 10, 0.95);
+            max-width: 700px;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px #000;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2em;
+            text-align: center;
+            color: #d4af37;
+            margin-bottom: 10px;
+        }
+
+        .campaign-code {
+            text-align: center;
+            font-size: 1.3em;
+            margin: 10px 0 20px;
+            color: #ffd700;
+        }
+
+        #players {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .player {
+            padding: 8px;
+            border-bottom: 1px solid #d4af37;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .player:last-child {
+            border-bottom: none;
+        }
+
+        .player .name {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .player .name.dm {
+            color: #ff4444;
+        }
+
+        .player .status {
+            font-size: 0.9em;
+            color: #f4e4c1;
+        }
+
+        #chat {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .chat-message {
+            margin-bottom: 8px;
+            padding: 5px;
+        }
+
+        .chat-message.system {
+            font-style: italic;
+            color: #aaa;
+        }
+
+        .chat-message .sender {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .chat-message .sender.dm {
+            color: #ff4444;
+        }
+
+        .chat-message .text {
+            margin-left: 5px;
+        }
+
+        #chat-form {
+            display: flex;
+        }
+
+        #chat-input {
+            flex: 1;
+            padding: 8px;
+            border-radius: 5px 0 0 5px;
+            border: none;
+            font-size: 14px;
+        }
+
+        #chat-send {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            background: #8b0000;
+            color: #f4e4c1;
+            cursor: pointer;
+        }
+
+        #chat-send:hover {
+            background: #b22222;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background: #8b0000;
+            color: #f4e4c1;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #b22222;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Lobby de la Campaña</h1>
+        <div class="campaign-code">Código de campaña: <span id="campaignCode"></span></div>
+
+        <div id="players">
+            <h3>Jugadores:</h3>
+        </div>
+
+        <div id="chat">
+            <h3>Chat:</h3>
+        </div>
+
+        <form id="chat-form">
+            <input type="text" id="chat-input" placeholder="Escribe un mensaje..." autocomplete="off" />
+            <button type="submit" id="chat-send">Enviar</button>
+        </form>
+
+        <button onclick="startCampaign()">Iniciar Campaña (Solo DM)</button>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        // Obtener parámetros de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const campaignCode = urlParams.get('campaign');
+        const characterUuid = urlParams.get('uuid');
+        const isDM = urlParams.get('dm') === 'true';
+
+        // Referencias DOM
+        const playersDiv = document.getElementById('players');
+        const campaignCodeSpan = document.getElementById('campaignCode');
+        const chatDiv = document.getElementById('chat');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+
+        campaignCodeSpan.textContent = campaignCode;
+
+        let socket = null;
+        let characterName = null;
+
+        // =======================
+        // Cargar nombre del personaje
+        // =======================
+        async function loadCharacterName() {
+            if (isDM) {
+                characterName = "Dungeon Master";
+                return;
+            }
+
+            if (!characterUuid) {
+                characterName = "Jugador";
+                console.warn("No se proporcionó UUID del personaje");
+                return;
+            }
+
+            try {
+                console.log("Cargando personaje con UUID:", characterUuid);
+                const res = await fetch(`/api/character/load?from_id=${characterUuid}`);
+                
+                if (!res.ok) {
+                    console.error("Error al cargar personaje:", res.status);
+                    characterName = "Jugador";
+                    return;
+                }
+                
+                const data = await res.json();
+                console.log("Datos del personaje:", data);
+                characterName = data.name || "Jugador";
+                console.log("Nombre del personaje cargado:", characterName);
+            } catch (error) {
+                console.error("Error cargando personaje:", error);
+                characterName = "Jugador";
+            }
+        }
+
+        // =======================
+        // Conectar al socket
+        // =======================
+        async function connectSocket() {
+            console.log("=== INICIANDO CONEXIÓN ===");
+            console.log("isDM:", isDM);
+            console.log("characterUuid:", characterUuid);
+            console.log("campaignCode:", campaignCode);
+            
+            await loadCharacterName();
+            
+            console.log("Nombre cargado:", characterName);
+
+            socket = io('http://localhost:5000', { 
+                transports: ['websocket', 'polling'] 
+            });
+
+            socket.on('connect', () => {
+                console.log('✓ Conectado al servidor');
+                
+                // TODOS llaman a join_campaign, incluido el DM
+                const joinData = {
+                    username: characterName,
+                    code: campaignCode,
+                    character_uuid: characterUuid  // null para DM, UUID para jugadores
+                };
+                
+                console.log("Enviando join_campaign con datos:", joinData);
+                socket.emit('join_campaign', joinData);
+            });
+
+            socket.on('player_joined', data => {
+                console.log("Evento player_joined recibido:", data);
+                updatePlayers(data.players);
+                
+                // Solo mostrar mensaje si es un jugador nuevo (no yo mismo)
+                if (data.new_player && data.new_player !== characterName) {
+                    addChatMessage('Sistema', `${data.new_player} se ha unido al lobby`, true);
+                }
+            });
+
+            socket.on('player_left', data => {
+                updatePlayers(data.players);
+                addChatMessage('Sistema', `${data.username} ha salido del lobby`, true);
+            });
+
+            socket.on('chat_message', data => {
+                addChatMessage(data.sender, data.text);
+            });
+
+            socket.on('error', data => {
+                console.error("Error del servidor:", data);
+                alert(data.message);
+            });
+        }
+
+        // =======================
+        // Actualizar lista de jugadores
+        // =======================
+        function updatePlayers(players) {
+            playersDiv.innerHTML = '<h3>Participantes:</h3>';
+            
+            players.forEach(p => {
+                const el = document.createElement('div');
+                el.className = 'player';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = p.is_dm ? 'name dm' : 'name';
+                nameSpan.textContent = p.username;
+                
+                const statusSpan = document.createElement('span');
+                statusSpan.className = 'status';
+                
+                if (p.is_dm) {
+                    statusSpan.textContent = '👑 Dungeon Master';
+                } else {
+                    statusSpan.textContent = p.character_uuid ? '✓ Personaje creado' : '⚠ Sin personaje';
+                }
+                
+                el.appendChild(nameSpan);
+                el.appendChild(statusSpan);
+                playersDiv.appendChild(el);
+            });
+        }
+
+        // =======================
+        // Añadir mensaje al chat
+        // =======================
+        function addChatMessage(sender, text, isSystem = false) {
+            const el = document.createElement('div');
+            el.className = isSystem ? 'chat-message system' : 'chat-message';
+            
+            if (isSystem) {
+                el.textContent = text;
+            } else {
+                const senderSpan = document.createElement('span');
+                senderSpan.className = sender === 'Dungeon Master' ? 'sender dm' : 'sender';
+                senderSpan.textContent = sender + ':';
+                
+                const textSpan = document.createElement('span');
+                textSpan.className = 'text';
+                textSpan.textContent = text;
+                
+                el.appendChild(senderSpan);
+                el.appendChild(textSpan);
+            }
+            
+            chatDiv.appendChild(el);
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+
+        // =======================
+        // Enviar mensaje
+        // =======================
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const message = chatInput.value.trim();
+            if (!message || !socket) return;
+            
+            socket.emit('chat_message', { 
+                text: message, 
+                code: campaignCode 
+            });
+            
+            chatInput.value = '';
+        });
+
+        // =======================
+        // Iniciar campaña (solo DM)
+        // =======================
+        function startCampaign() {
+            if (!socket) {
+                alert('Conectando al servidor...');
+                return;
+            }
+            
+            socket.emit('start_campaign', { code: campaignCode });
+            alert('¡Campaña iniciada! (implementar lógica)');
+        }
+
+        // =======================
+        // Inicialización
+        // =======================
+        window.onload = () => {
+            if (!campaignCode) {
+                alert('No se especificó código de campaña');
+                window.location.href = '/';
+                return;
+            }
+            
+            connectSocket();
+        };
+
+        // Limpiar al salir
+        window.addEventListener('beforeunload', () => {
+            if (socket) {
+                socket.emit('leave_campaign', { code: campaignCode });
+                socket.disconnect();
+            }
+        });
+    </script>
+</body>
+
+</html>

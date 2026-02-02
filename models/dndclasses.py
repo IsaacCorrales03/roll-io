@@ -1,0 +1,186 @@
+from .dndclass import DnDClass
+from .classFeatures import *
+from typing import Type
+
+class Barbarian(DnDClass):
+    name = "Barbaro"
+    definition = (
+        "Un guerrero feroz impulsado por la furia. "
+        "El bárbaro canaliza su ira en combate para obtener "
+        "fuerza sobrehumana, resistencia extrema y reflejos salvajes."
+    )
+    hit_die = 12
+    weapon_proficiencies = []
+
+
+    def ac_formula(self, actor):
+        # Defensa sin armadura
+        return 10 + actor.dex_mod + actor.con_mod
+
+    def features_by_level(self) -> dict[int, list[type[ClassFeature]]]:
+        return {
+            1: [UnarmoredDefense, Rage],
+            2: [RecklessAttack]
+        }
+
+class Bard(DnDClass):
+    name = "Bardo"
+    definition = (
+        "El bardo canaliza la magia a través de la música y las palabras, "
+        "inspirando aliados y debilitando enemigos."
+    )
+    hit_die = 8
+    weapon_proficiencies = [
+        "simple_weapons", "rapier", "longsword", "shortsword"
+    ]
+
+    def ac_formula(self, actor):
+        return 10 + actor.dex_mod
+    def features_by_level(self) -> dict[int, list[type[ClassFeature]]]:
+        return {
+            1: [BardicInspiration],
+            2: [SongOfRest]
+        }
+
+class Warlock(DnDClass):
+    name = "Brujo"
+    definition = (
+        "Buscadores de conocimiento oculto que obtienen poder mediante "
+        "pactos con entidades sobrenaturales."
+    )
+    hit_die = 8
+    weapon_proficiencies = [
+        "simple_weapons", "light_crossbow"
+    ]
+
+    def ac_formula(self, actor):
+        return 10 + actor.dex_mod
+
+class Cleric(DnDClass):
+    name = "Clérigo"
+    definition = (
+        "Intermediarios entre el mundo mortal y los planos divinos, "
+        "imbuidos de magia sagrada."
+    )
+    hit_die = 8
+    weapon_proficiencies = ["simple_weapons"]
+
+    def ac_formula(self, actor):
+        return 10 + actor.dex_mod
+
+class Druid(DnDClass):
+    name = "Druida"
+    definition = (
+        "Encarnaciones vivientes de la voluntad de la naturaleza."
+    )
+    hit_die = 8
+    weapon_proficiencies = ["simple_weapons", "scimitar"]
+
+    def ac_formula(self, actor):
+        return 10 + actor.dex_mod
+
+class Ranger(DnDClass):
+    name = "Explorador"
+    definition = (
+        "Guardianes de las fronteras salvajes, expertos en rastreo y combate."
+    )
+    hit_die = 10
+    weapon_proficiencies = [
+        "simple_weapons", "martial_weapons", "longbow"
+    ]
+
+    def ac_formula(self, actor):
+        return 10 + actor.dex_mod
+
+class Fighter(DnDClass):
+    name = "Guerrero"
+    definition = (
+        "Maestros absolutos del combate y las armas."
+    )
+    hit_die = 10
+    weapon_proficiencies = [
+        "simple_weapons", "martial_weapons"
+    ]
+
+    def ac_formula(self, actor):
+        return 10 + actor.dex_mod
+
+class Sorcerer(DnDClass):
+    name = "Hechicero"
+    definition = (
+        "Canales vivientes de magia innata y peligrosa."
+    )
+    hit_die = 6
+    weapon_proficiencies = ["simple_weapons"]
+
+    def ac_formula(self, actor):
+        return 10 + actor.dex_mod
+
+class Wizard(DnDClass):
+    name = "Mago"
+    definition = (
+        "Estudiosos supremos de la magia arcana."
+    )
+    hit_die = 6
+    weapon_proficiencies = ["dagger", "quarterstaff"]
+
+    def ac_formula(self, actor):
+        return 10 + actor.dex_mod
+
+    def features_by_level(self) -> dict[int, list[type[ClassFeature]]]:
+        return {}
+
+class Monk(DnDClass):
+    name = "Monje"
+    definition = (
+        "Guerreros disciplinados que canalizan el ki."
+    )
+    hit_die = 8
+    weapon_proficiencies = ["simple_weapons", "shortsword"]
+
+    def ac_formula(self, actor):
+        # Defensa sin armadura del monje
+        return 10 + actor.dex_mod + actor.wis_mod
+
+class Paladin(DnDClass):
+    name = "Paladín"
+    definition = (
+        "Guerreros sagrados ligados por juramentos divinos."
+    )
+    hit_die = 10
+    weapon_proficiencies = [
+        "simple_weapons", "martial_weapons"
+    ]
+
+    def ac_formula(self, actor):
+        return 10 + actor.dex_mod
+
+class Rogue(DnDClass):
+    name = "Pícaro"
+    definition = (
+        "Especialistas en sigilo, astucia y golpes precisos."
+    )
+    hit_die = 8
+    weapon_proficiencies = [
+        "simple_weapons", "finesse_weapons", "ranged_weapons"
+    ]
+
+    def ac_formula(self, actor):
+        return 10 + actor.dex_mod
+
+
+
+CLASS_MAP: dict[str, Type[DnDClass]] = {
+    "Barbaro": Barbarian,
+    "Bardo": Bard, 
+    "Brujo": Warlock,
+    "Clerigo": Cleric, 
+    "Druida": Druid,
+    "Explorador": Ranger,
+    "Guerrero": Fighter, 
+    "Hechicero": Sorcerer,
+    "Mago": Wizard,
+    "Monje": Monk, 
+    "Paladin": Paladin,
+    "Picaro": Rogue,
+}
