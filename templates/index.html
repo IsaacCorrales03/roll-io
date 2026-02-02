@@ -113,7 +113,7 @@
                 return; 
             }
 
-            socket = io('http://localhost:5000', { 
+            socket = io('/', { 
                 transports: ['websocket', 'polling'] 
             });
 
