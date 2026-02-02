@@ -15,11 +15,11 @@ class Action(BaseEntity, ABC):
     life_cost: int = 0
 
     @abstractmethod
-    def requirements(self, actor: Actor, context) -> bool:
+    def requirements(self, actor: "Actor", context) -> bool:
         pass
 
     @abstractmethod
-    def resolve(self, actor: Actor, target: Actor, context) -> dict:
+    def resolve(self, actor: "Actor", target: "Actor", context) -> dict:
         pass
 
 class GameEvent(BaseEntity, ABC):
