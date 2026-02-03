@@ -1,15 +1,19 @@
-from .base import Actor, ClassFeature
+from .base import Actor
+from .ClassFeature import ClassFeature
 from .race import Race, ATTRIBUTE_KEYS
 from .weapon import Weapon
 from .dndclass import DnDClass
 import random
 from typing import Optional
-
+import uuid
 
 class Character(Actor):
+    """Representa un personaje de Dungeons & Dragons con raza, clase y atributos asociados.
+    Gestiona el progreso de nivel, puntos de vida, rasgos de clase y acciones básicas de combate.
+    """
     MAX_LEVEL = 20  # Nivel máximo permitido
 
-    def __init__(self, id: str, name: str, race: Race, dnd_class: DnDClass):
+    def __init__(self, id: uuid.UUID, name: str, race: Race, dnd_class: DnDClass):
         # Atributos base heredados de la raza
         self.attributes = race.attributes.copy()
         super().__init__(id, name, self.attributes)
@@ -30,7 +34,6 @@ class Character(Actor):
 
         # Competencias con armas según la clase
         self.weapon_proficiencies = dnd_class.weapon_proficiencies.copy()
-
         # Puntos de vida iniciales
         self.max_hp = self.dnd_class.hit_die + self.con_mod
         self.hp = self.max_hp
@@ -57,12 +60,13 @@ class Character(Actor):
             self.dnd_class.hit_die,
             self.con_mod,
             use_average=use_average
+
         )
         self.max_hp += hp_gained
         self.hp += hp_gained  # curación automática al subir de nivel
 
         # ASI
-        if self.level in (4, 8, 12, 16, 19):
+        if self.level in {4, 8, 12, 16, 19}:
             self.points += 2
 
         self.apply_level_features()
@@ -142,11 +146,7 @@ class Character(Actor):
 
     def roll_hit_die(self, hit_die: int, con_mod: int, use_average=False):
         # Tirada de dado de golpe al subir de nivel
-        if use_average:
-            base = (hit_die // 2) + 1
-        else:
-            base = random.randint(1, hit_die)
-
+        base = (hit_die // 2) + 1 if use_average else random.randint(1, hit_die)
         return max(1, base + con_mod)
 
     def can_act(self) -> bool:
@@ -157,11 +157,14 @@ class Character(Actor):
         return False
 
     def apply_level_features(self):
-        # Aplica las habilidades correspondientes al nivel actual
+        # 1) Obtener features por nivel
         feature_classes = self.dnd_class.features_by_level().get(self.level, [])
+
         for feature_cls in feature_classes:
             feature = feature_cls()
-            feature.apply(self)
+            feature.level = self.level  # asigna nivel del personaje
+            # 2) Registrar la feature en el actor
+            self.features.append(feature)
 
     def to_json(self) -> dict:
         # Serialización del personaje para API / frontend
@@ -199,6 +202,6 @@ class Character(Actor):
         }
 
 
-def create_character_Class(id: str, nombre: str, raza: Race, dnd_class: DnDClass):
+def create_character_Class(id: uuid.UUID, nombre: str, raza: Race, dnd_class: DnDClass):
     # Factory simple para creación de personajes
     return Character(id, nombre, raza, dnd_class)

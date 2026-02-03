@@ -1,42 +1,51 @@
-from .base import Actor, ClassFeature
-from abc import ABC, abstractmethod
+from abc import ABC
+from typing import Dict, List, Type
+from .base import Actor
+from .ClassFeature import ClassFeature
 
 
 class DnDClass(ABC):
-    # Nombre visible de la clase (ej. Bárbaro, Guerrero)
+    # Metadatos
     name: str
-
-    # Descripción narrativa de la clase
     definition: str
-
-    # Dado de golpe usado para calcular HP
     hit_die: int
-
-    # Lista de armas con las que la clase es competente
     weapon_proficiencies: list
 
-    @abstractmethod
-    def ac_formula(self, actor) -> int:
+    # =======================
+    # Declaración de features
+    # =======================
+    def features_by_level(self) -> Dict[int, List[Type[ClassFeature]]]:
         """
-        Calcula la Clase de Armadura base del personaje
-        cuando NO lleva armadura equipada.
-        Cada clase define su propia fórmula.
-        """
-        pass
-
-    def features_by_level(self) -> dict[int, list[type[ClassFeature]]]:
-        """
-        Devuelve las habilidades de clase agrupadas por nivel.
-        La clave es el nivel, el valor son las clases de features.
+        Mapa: nivel -> lista de clases de ClassFeature
+        Ej:
+        {
+            1: [UnarmoredDefense],
+            2: [RecklessAttack]
+        }
         """
         return {}
 
-    def features_info_by_level(self) -> dict[int, list[dict]]:
+    # =======================
+    # Asignación al Actor
+    # =======================
+    def grant_features(self, actor: Actor) -> None:
         """
-        Versión serializable de las habilidades por nivel.
-        Útil para exponer datos al frontend o a la API.
+        Otorga al actor todas las features correspondientes
+        a su nivel actual. Idempotente.
         """
+        for level, feature_classes in self.features_by_level().items():
+            if actor.level < level:
+                continue
+
+            for feature_cls in feature_classes:
+                if not any(isinstance(f, feature_cls) for f in actor.features):
+                    actor.features.append(feature_cls())
+
+    # =======================
+    # Serialización (UI / API)
+    # =======================
+    def features_info_by_level(self) -> Dict[int, List[dict]]:
         return {
-            level: [feature.info() for feature in features]
+            level: [feature_cls.info() for feature_cls in features]
             for level, features in self.features_by_level().items()
         }

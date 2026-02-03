@@ -2,9 +2,14 @@
 # del sistema
 
 from abc import ABC, abstractmethod
-from typing import List, Callable, Optional
+from typing import List, Callable, Optional, Any, Dict
 import random
 from .weapon import Weapon
+from dataclasses import dataclass, field
+from datetime import datetime
+from uuid import UUID, uuid4
+from collections import defaultdict
+
 
 class BaseEntity(ABC):
     def __init__(self, id:str, name: str):
@@ -34,32 +39,9 @@ class GameEvent(BaseEntity, ABC):
     def apply(self, context):
         pass
 
-class ClassFeature(ABC):
-    """
-    Class feature es la clase abstracta que añade las habilidades para cada clase
-    """
-    name: str
-    description: str
-    level: int
 
-    @classmethod
-    def info(cls) -> dict:
-        return {
-            "name": cls.name,
-            "description": cls.description,
-            "level": cls.level
-        }
-    
-    def __init__(self):
-        pass
-    @abstractmethod
-    def apply(self, actor: "Actor"):
-        pass
 
-    @abstractmethod
-    def use(self, actor: "Actor", turn_manager) -> dict:
-        """Usa la feature si es activable."""
-        pass
+
 
 class Actor(ABC):
     """
@@ -77,20 +59,34 @@ class Actor(ABC):
     @property
     def cha_mod(self)-> int:
         return (self.attributes["CHA"] - 10) // 2
- 
-    def __init__(self, id: str, name: str, attributes: dict):
+    
+    @property
+    def has_bardic_inspiration(self) -> bool:
+        return self.bardic_inspiration_die != 0
+
+
+    def consume_bardic_inspiration(self) -> int:
+        if self.bardic_inspiration_die == 0:
+            raise RuntimeError("No bardic inspiration available")
+
+        die = self.bardic_inspiration_die
+        self.bardic_inspiration_die = 0
+        return random.randint(1, die)
+    
+    def __init__(self, id: UUID, name: str, attributes: dict):
         self.id = id
         self.name = name
         self.attributes = attributes
-        self.features: List[ClassFeature] = []
-        self.ac_formulas: List[Callable[["Actor"], int]] = []
         self.active_effects = []
+        self.features = []
         self.armor = None
         self.shield = None
         self.weapon: Optional[Weapon]
         self.hp = 0
         self.level = 0
         self.max_hp = 0
+        self.base_ac: Optional[int] = None
+        self.bardic_inspiration_die = 0
         self.inspiration_dice = {}  # key: ClassFeature instance, value: dict con 'die' y 'turns_left'
 
 
@@ -104,22 +100,7 @@ class Actor(ABC):
 
     def calc_ac(self) -> int:
         """ Esta función se encarga de calcular y devolver el AC de un actor"""
-        ac_candidates = []
-
-        # Base AC
-        if self.armor:
-            ac_candidates.append(self.armor.ac(self))
-        else:
-            ac_candidates.append(10 + self.dex_mod)
-
-        # Fórmulas de features
-        for formula in self.ac_formulas:
-            val = formula(self)
-            if val > 0:
-                ac_candidates.append(val)
-
-        ac = max(ac_candidates)
-
+        ac = 10 + self.dex_mod
         # Escudo
         if self.shield:
             ac += self.shield.bonus
@@ -166,9 +147,17 @@ class Actor(ABC):
         return total, result, modifier, is_critical, is_fumble
     
     def damage_roll(self, weapon, critical=False) -> int:
-        """Realiza una tirada de daño, que recibe un arma, su dado y el daño que hace, devuelve el daño a realizar"""
+        """Realiza una tirada de daño, que recibe un arma, su dado y el daño que hace, devuelve el daño a reali"""
         total_dice = weapon.dice_count * 2 if critical else weapon.dice_count
         damage = sum(random.randint(1, weapon.dice_size) for _ in range(total_dice))
         modifier = (self.attributes[weapon.attribute] - 10) // 2 + weapon.bonus
         return damage + modifier
 
+    def calculate_base_ac(self):
+        self.base_ac = self.calc_ac()
+
+    def get_feature(self, name: str):
+        for feature in self.features:
+            if feature.name == name:
+                return feature
+        return None

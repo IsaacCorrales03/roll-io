@@ -1,25 +1,62 @@
-from models.races import human, dragonborn
-from models.dndclasses import Barbarian, Bard
+from uuid import uuid4
+
 from models.character import Character
-from models.turnManager import TurnManager  # asumiendo que ya lo implementaste
-from models.weapon import Weapon
+from models.events import GameState, EventDispatcher
+from models.races import human
+from models.dndclasses import Bard
 
-# --- Crear personajes ---
-b1 = Character(id="1", name="Thorgar", race=dragonborn, dnd_class=Barbarian())
-b2 = Character(id="2", name="Lyria", race=human, dnd_class=Bard())
-b3 = Character(id="3", name="Grum", race=dragonborn, dnd_class=Barbarian())
+def main():
+    # ======================
+    # 1. Crear personaje Bard
+    # ======================
+    bard = Character(
+        id=uuid4(),
+        name="Himmel",
+        race=human,
+        dnd_class=Bard(),
+    )
 
-# Armas simples
-sword = Weapon(name="Espada Larga", dice_count=1, dice_size=8, attribute="STR", bonus=0)
-b1.equip(weapon=sword)
-b3.equip(weapon=sword)
+    # Subir al nivel 2 para desbloquear Song of Rest
+    bard.levelUp()
 
-# Inicializar TurnManager (simplificado)
-turn_manager = TurnManager([b1, b2, b3])
+    # Crear GameState y dispatcher
+    dispatcher = EventDispatcher()
+    state = GameState(
+        characters={bard.id: bard},
+        current_turn=1,
+        current_phase="rest",
+        dispatcher=dispatcher
+    )
 
-# --- Bardo da inspiración ---
-b2.features[0].use(b2, turn_manager, target=b1) # type: ignore
+    # ======================
+    # 2. Crear objetivo de curación
+    # ======================
+    target = Character(
+        id=uuid4(),
+        name="Hita",
+        race=human,
+        dnd_class=Bard()  # puede ser cualquier clase
+    )
+    target.hp -= 4  # simulamos daño
+    state.characters[target.id] = target
 
-print(b1.attack(b2))
-print(f"\n{b1.name} ataca a {b3.name}:")
-print(b1.attack(b2))
+    print("HP inicial:", target.hp, "/", target.max_hp)
+
+
+    # ======================
+    # 3. Usar Song of Rest
+    # ======================
+    song = bard.get_feature("SongOfRest")
+    if song:
+        event = song.use(actor=bard, state=state, targets=[target.id])
+
+    else:
+        event = None
+    print("HP después:", target.hp, "/", target.max_hp)
+    # ======================
+    # 4. Revisar resultados
+    # ======================
+
+
+if __name__ == "__main__":
+    main()
