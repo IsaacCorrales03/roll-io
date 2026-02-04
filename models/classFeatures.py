@@ -2,7 +2,10 @@ from .base import Actor
 from .ClassFeature import ClassFeature as ClassFeature
 from typing import Optional
 import random
-from .events import Event, GameState, EventContext
+from .events.Event import Event
+from .events.GameState import GameState
+from .events.EventContext import EventContext
+
 from uuid import UUID
 
 class UnarmoredDefense(ClassFeature):

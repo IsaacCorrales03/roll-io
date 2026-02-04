@@ -2,13 +2,11 @@
 # del sistema
 
 from abc import ABC, abstractmethod
-from typing import List, Callable, Optional, Any, Dict
+from typing import Optional
 import random
 from .weapon import Weapon
-from dataclasses import dataclass, field
-from datetime import datetime
-from uuid import UUID, uuid4
-from collections import defaultdict
+from uuid import UUID
+
 
 
 class BaseEntity(ABC):
@@ -30,18 +28,6 @@ class Action(BaseEntity, ABC):
     def resolve(self, actor: "Actor", target: "Actor", context) -> dict:
         pass
 
-class GameEvent(BaseEntity, ABC):
-    @abstractmethod
-    def trigger(self, context) -> bool:
-        pass
-
-    @abstractmethod
-    def apply(self, context):
-        pass
-
-
-
-
 
 class Actor(ABC):
     """
@@ -57,9 +43,21 @@ class Actor(ABC):
         return (self.attributes["DEX"] - 10) // 2
 
     @property
-    def cha_mod(self)-> int:
+    def cha_mod(self) -> int:
         return (self.attributes["CHA"] - 10) // 2
     
+    @property
+    def str_mod(self) -> int:
+        return (self.attributes["STR"] - 10) // 2
+
+    @property
+    def int_mod(self) -> int:
+        return (self.attributes["INT"] - 10) // 2
+    @property
+    def wis_mod(self) -> int:
+        return (self.attributes["WIS"] - 10) // 2
+        
+
     @property
     def has_bardic_inspiration(self) -> bool:
         return self.bardic_inspiration_die != 0
@@ -90,14 +88,6 @@ class Actor(ABC):
         self.inspiration_dice = {}  # key: ClassFeature instance, value: dict con 'die' y 'turns_left'
 
 
-    @abstractmethod
-    def can_act(self) -> bool:
-        pass
-
-    @abstractmethod
-    def attack(self, target, advantage=False, disadvantage=False) -> dict:
-        pass
-
     def calc_ac(self) -> int:
         """ Esta función se encarga de calcular y devolver el AC de un actor"""
         ac = 10 + self.dex_mod
@@ -119,39 +109,6 @@ class Actor(ABC):
             self.armor = armor
         if weapon:
             self.weapon = weapon
-
-    def roll(self, attribute: str = "", advantage=False, disadvantage=False):
-        """
-        Realiza una tirada de dado d20 y devuelve el resultado con modificador, el resultado con dado, el modificador, 
-        si fue crítico y si falló 
-        """
-        # Tirada de d20
-        result = None
-        is_critical = False
-        is_fumble = False
-        # Tirada de d20
-        if advantage:
-            rolls = [random.randint(1, 20) for _ in range(2)]
-            result = max(rolls)
-        elif disadvantage:
-            rolls = [random.randint(1, 20) for _ in range(2)]
-            result = min(rolls)
-        else:
-            result = random.randint(1, 20)
-        is_critical = result == 20
-        is_fumble = result == 1
-        modifier = 0
-        if attribute and attribute in self.attributes:
-            modifier = (self.attributes[attribute] - 10) // 2
-        total = result + modifier
-        return total, result, modifier, is_critical, is_fumble
-    
-    def damage_roll(self, weapon, critical=False) -> int:
-        """Realiza una tirada de daño, que recibe un arma, su dado y el daño que hace, devuelve el daño a reali"""
-        total_dice = weapon.dice_count * 2 if critical else weapon.dice_count
-        damage = sum(random.randint(1, weapon.dice_size) for _ in range(total_dice))
-        modifier = (self.attributes[weapon.attribute] - 10) // 2 + weapon.bonus
-        return damage + modifier
 
     def calculate_base_ac(self):
         self.base_ac = self.calc_ac()

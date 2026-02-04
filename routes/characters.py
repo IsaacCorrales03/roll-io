@@ -1,6 +1,7 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
 from services.character_service import CharacterService
 from services.character_repository import CharacterRepository
+
 
 character_bp = Blueprint("character", __name__)
 
@@ -37,3 +38,4 @@ def load_character():
         return jsonify({"error": "Personaje no encontrado"}), 404
     print(character.to_json())
     return jsonify(character.to_json()), 200
+

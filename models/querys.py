@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from uuid import UUID
 from typing import Any, List, TypeVar, Generic
-from .events import GameState, Event, EventContext
+from math import floor
+from models.results import StatModifierResult
+from .events.Event import Event
+from .events.EventContext import EventContext
+from .events.GameState import GameState
 from .results import *
 
 # =======================
@@ -67,4 +71,40 @@ class GetArmorClassHandler(QueryHandler[GetArmorClass, ArmorClassResult]):
                 {"source": "base", "value": base_ac},
                 *modifiers
             ]
+        )
+
+@dataclass(frozen=True)
+class GetStatModifier(Query):
+    actor_id: UUID
+    attribute: str
+
+class GetStatModifierHandler(QueryHandler[GetStatModifier, StatModifierResult]):
+    def handle(self, query: GetStatModifier, state: GameState) -> StatModifierResult:
+        actor = state.characters.get(query.actor_id)
+        if actor is None:
+            raise RuntimeError("Actor no encontrado")
+
+        # Evento opcional para que otras features modifiquen temporalmente el modifier
+        event = Event(
+            type="stat_modifier_requested",
+            context=EventContext(actor_id=query.actor_id),
+            payload={"attribute": query.attribute},
+            cancelable=False
+        )
+        collected_events = state.run_readonly_event(event)
+
+        # Modifier base (según regla de D&D)
+        base_value = floor((actor.attributes[query.attribute] - 10) / 2)
+        modifiers = []
+
+        # Procesar cualquier modificación adicional desde eventos
+        for ev in collected_events:
+            if ev.type == "stat_modifier_modified":
+                modifiers.append(ev.payload)  # ejemplo: {"source": "buff", "value": 1}
+
+        final_value = base_value + sum(m["value"] for m in modifiers)
+
+        return StatModifierResult(
+            value=final_value,
+            breakdown=[{"source": "base", "value": base_value}, *modifiers]
         )

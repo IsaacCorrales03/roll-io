@@ -183,6 +183,7 @@ def lobby():
     """
     return render_template("lobby.html")
 
+
 if __name__ == "__main__":
     socketio.run(
         app=app, 

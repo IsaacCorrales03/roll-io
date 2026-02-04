@@ -3,7 +3,7 @@ class Weapon:
         self,
         name: str,
         dice_count: int,
-        dice_size: int,
+        dice_size: str,
         attribute: str,
         bonus: int = 0,
         damage_type: str = "slashing"

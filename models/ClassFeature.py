@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from .events import Event, GameState
+from .events.Event import Event
+from .events.GameState import GameState
 from typing import Optional
 
 class ClassFeature(ABC):

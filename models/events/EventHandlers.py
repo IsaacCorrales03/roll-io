@@ -1,5 +1,28 @@
-import random
-from .events import Event, EventContext, RollResult, ActionContext, EventHandler, GameState
+from typing import TYPE_CHECKING
+from .EventHandler import EventHandler
+
+if TYPE_CHECKING:
+    from .Event import Event
+    from .GameState import GameState
+    from .EventContext import EventContext
+
+class ApplyDamageHandler(EventHandler):
+    def handle(self, event: Event, state: GameState) -> None:
+        if event.type != "attack_hit":
+            return
+
+        target_id = event.payload["target_id"]
+        damage = event.payload["damage"]
+        target = state.characters.get(target_id)
+        if target:
+            target.hp -= damage
+            if target.hp <= 0:
+                state.dispatch(Event(
+                    type="entity_killed",
+                    context=EventContext(actor_id=target.id),
+                    payload={},
+                    cancelable=False
+                ))
 
 class BardicInspirationHandler(EventHandler):
     def handle(self, event: Event, state: GameState) -> None:

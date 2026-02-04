@@ -3,9 +3,19 @@ from uuid import UUID
 
 @dataclass(frozen=True)
 class RollCommand:
+    actor_id: UUID           
+    dice: str                
+    reason: str           
+    advantage: bool = False
+    disadvantage: bool = False
+
+@dataclass(frozen=True)
+class AttackCommand:
     actor_id: UUID
-    dice: str          
-    reason: str        
+    target_id: UUID
+    mode: str
+    adventage: bool
+    disadventage: bool
 
 @dataclass(frozen=True)
 class UseBardicInspirationCommand:

@@ -4,7 +4,6 @@ from .race import Race, ATTRIBUTE_KEYS
 from .weapon import Weapon
 from .dndclass import DnDClass
 import random
-from typing import Optional
 import uuid
 
 class Character(Actor):
@@ -72,7 +71,6 @@ class Character(Actor):
         self.apply_level_features()
         return True
 
-
     def assign_point(self, attribute: str, value: int = 1):
         # Asigna puntos a atributos válidos
         if self.points < value:
@@ -84,77 +82,10 @@ class Character(Actor):
         self.points -= value
         return True
 
-    def attack(self, target: Actor, advantage=False, disadvantage=False):
-        # Ataque básico con arma equipada
-        if not self.weapon:
-            return {}
-
-        # Tirada de ataque
-        tirada_ataque_total, tirada_dado, modificador, is_critical, is_fumble = (
-            self.roll(self.weapon.attribute, advantage, disadvantage)
-        )
-
-        bonus_tirada = 0
-
-        # Uso opcional de inspiración
-        if self.inspiration_dice:
-            fuente, info = next(iter(self.inspiration_dice.items()))
-            usar = input(
-                f"{self.name}, ¿usar dado de Bardic Inspiration ({tirada_ataque_total})? (s/n)"
-            ).lower() == "s"
-            if usar:
-                bonus_tirada += random.randint(1, info["die"])
-                del self.inspiration_dice[fuente]
-                tirada_ataque_total += bonus_tirada
-
-        # Comprobación de impacto
-        if tirada_ataque_total >= target.calc_ac() and not is_fumble:
-            damage = self.damage_roll(self.weapon, is_critical)
-
-            # Bonificadores de habilidades activas
-            for feature in self.features:
-                if getattr(feature, "active", False):
-                    damage += getattr(feature, "get_damage_bonus", lambda: 0)()
-
-            target.hp -= damage
-
-            return {
-                "hit": True,
-                "tirada_ataque_total": tirada_ataque_total,
-                "tirada_dado": tirada_dado,
-                "modificador": modificador,
-                "damage": damage,
-                "bonus_tirada": bonus_tirada,
-                "critical": is_critical,
-                "fumble": False,
-                "weapon": self.weapon.name,
-                "damage_type": self.weapon.damage_type,
-            }
-
-        # Fallo del ataque
-        return {
-            "hit": False,
-            "tirada_ataque_total": tirada_ataque_total,
-            "tirada_dado": tirada_dado,
-            "modificador": modificador,
-            "damage": 0,
-            "critical": is_critical,
-            "fumble": False,
-            "weapon": self.weapon.name,
-            "damage_type": self.weapon.damage_type,
-        }
-
     def roll_hit_die(self, hit_die: int, con_mod: int, use_average=False):
         # Tirada de dado de golpe al subir de nivel
         base = (hit_die // 2) + 1 if use_average else random.randint(1, hit_die)
         return max(1, base + con_mod)
-
-    def can_act(self) -> bool:
-        # Control simple de energía por acción
-        if self.attributes["energy"] >= 3:
-            self.attributes["energy"] -= 3
-            return True
-        return False
 
     def apply_level_features(self):
         # 1) Obtener features por nivel

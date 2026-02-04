@@ -14,7 +14,7 @@ class CharacterService:
 
     def create(self, name: str, race_key: str, class_key: str) -> Character:
         character = Character(
-            id=str(uuid.uuid4()),
+            id=uuid.uuid4(),
             name=name,
             race=RACE_MAP[race_key],
             dnd_class=CLASS_MAP[class_key]()

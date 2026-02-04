@@ -12,3 +12,8 @@ class QueryResult:
 class ArmorClassResult(QueryResult):
     value: int
     breakdown: List[dict]
+
+@dataclass
+class StatModifierResult(QueryResult):
+    value: int
+    breakdown: list[dict]
