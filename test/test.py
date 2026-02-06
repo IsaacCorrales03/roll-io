@@ -1,5 +1,4 @@
 from uuid import uuid4
-
 from models.character import Character
 from models.events.Event import Event
 from models.events.GameState import GameState
@@ -7,11 +6,15 @@ from models.events.EventContext import EventContext
 from models.events.EventDispatcher import EventDispatcher
 from models.events.EventHandler import EventHandler
 from models.races import human
-from models.dndclasses import Bard, Fighter
-from models.commands import AttackCommand
-from models.actions import AttackAction
+from models.dndclasses import Bard, Barbarian
+from models.commands import *
+from models.actions.actions import *
 from models.weapon import Weapon
+from models.events.EventHandlers import *
 from models.querys import *
+from models.ProgresionSystem import ProgressionSystem
+
+# Crear un arma simple
 sword = Weapon(
     name="Sword",
     dice_count=1,
@@ -20,20 +23,14 @@ sword = Weapon(
     bonus=2,
     damage_type="slashing",
 )
-# ------------------------
-# Handler de daño
-# ------------------------
-from models.events.EventHandlers import *
 
-# ------------------------
-# Simulación de ataque
-# ------------------------
 def main():
     # Crear personajes
     bard = Character(id=uuid4(), name="Himmel", race=human, dnd_class=Bard())
-    fighter = Character(id=uuid4(), name="Thor", race=human, dnd_class=Fighter())
+    fighter = Character(id=uuid4(), name="Thor", race=human, dnd_class=Barbarian())  # solo ejemplo
     bard.weapon = sword
-    print(f"HP inicial de {fighter.name}: {fighter.hp}")
+    fighter.weapon = sword
+    print(f"Estados iniciales de {bard.name}: {getattr(bard, 'statuses', {})}")
 
     # Crear dispatcher y GameState
     dispatcher = EventDispatcher()
@@ -44,37 +41,56 @@ def main():
         dispatcher=dispatcher
     )
 
-    # Registrar handler de daño
+    # Registrar handler de aturdimiento
+    dispatcher.register("attack_roll", StunnedAttackHandler())
+    dispatcher.register("attack_hit", ApplyDamageHandler())
+    dispatcher.register("status_requested", ApplyStatusHandler())
+    dispatcher.register("attack_hit", RageDamageHandler())
     state.register_query_handler(GetArmorClass, GetArmorClassHandler())
     state.register_query_handler(GetStatModifier, GetStatModifierHandler())
-    state.dispatcher.register("attack_hit", ApplyDamageHandler())
-    bard.attributes["STR"] += 20
-    # Bard ataca a Fighter
-    attack_command = AttackCommand(
-        actor_id=bard.id,
-        target_id=fighter.id,
-        mode="melee",
-        adventage=False,
-        disadventage=False
-    )
-    attack_action = AttackAction(attack_command)
+    ProgressionSystem.apply(fighter, state)
+    rage_action = UseRageAction(fighter.id)
+    rage_event = rage_action.execute(state)
     
-    result_event = attack_action.execute(state)
 
-    attacker_name = state.characters[attack_command.actor_id].name
-    target_name = state.characters[attack_command.target_id].name
-    print(result_event)
+    # ------------------------
+    # Aplicar estado "aturdido"
+    # ------------------------
+    status_command = StatusCommand(
+        actor_id=bard.id,
+        target_id=bard.id,
+        status="aturdido",
+        duration_turns=2
+    )
+    status_action = StatusAction(status_command)
+    status_event = status_action.execute(state)    
+    attack_command = AttackCommand(actor_id=bard.id, target_id=fighter.id, mode="melee", disadventage= False, adventage=False)
+    attack_action = AttackAction(attack_command)
 
-    if result_event.type == "attack_hit":
-        print(f"{attacker_name} golpea a {target_name}!")
-        print(f"  Daño aplicado: {result_event.payload['damage']}")
-    else:
-        print(f"{attacker_name} falla su ataque a {target_name}.")
-        print(f"  Tirada de ataque: {result_event.payload['roll']} → total {result_event.payload['attack_score']} vs AC {result_event.payload['target_ac']}")
+        # ------------------------
+    # Turno del fighter
+    # ------------------------
+    attack_command_fighter = AttackCommand(
+        actor_id=fighter.id,
+        target_id=bard.id,
+        mode="melee",
+        disadventage=False,
+        adventage=False
+    )
+    attack_action_fighter = AttackAction(attack_command_fighter)
 
-    print(f"HP final de {target_name}: {state.characters[attack_command.target_id].hp}")
-
-
+    for i in range(2):
+        try:
+            print(fighter.status)
+            attack_result = attack_action_fighter.execute(state)
+            if attack_result.type == "attack_hit":
+                print(f"{fighter.name} golpea a {bard.name}!")
+                print(f"  Daño aplicado: {attack_result.payload['damage']}")
+            else:
+                print(f"{fighter.name} falla su ataque a {bard.name}.")
+        except RuntimeError as e:
+            print(f"{fighter.name} no puede atacar: {str(e)}")
+        state.end_turn()
 
 if __name__ == "__main__":
     main()

@@ -1,10 +1,18 @@
 from typing import TYPE_CHECKING
 from .EventHandler import EventHandler
-
+from .Event import Event
+from .EventContext import EventContext
+from ..ProgresionSystem import ProgressionSystem
 if TYPE_CHECKING:
-    from .Event import Event
     from .GameState import GameState
-    from .EventContext import EventContext
+
+
+class LevelUpHandler:
+    def handle(self, event, state):
+        if event.type != "level_up":
+            return
+        actor = state.characters[event.context.actor_id]
+        ProgressionSystem.apply(actor, state)
 
 class ApplyDamageHandler(EventHandler):
     def handle(self, event: Event, state: GameState) -> None:
@@ -24,6 +32,28 @@ class ApplyDamageHandler(EventHandler):
                     cancelable=False
                 ))
 
+class RageDamageHandler(EventHandler):
+    def handle(self, event, state):
+        if event.type != "attack_hit":
+            return
+        print("handle event")
+        ctx = event.context
+        if ctx is None or ctx.actor_id is None:
+            return  # evento sin actor → no aplica rag
+        print("context exist")
+        actor = state.characters.get(ctx.actor_id)
+        if actor is None:
+            return
+        print("actor exist")
+        rage = actor.status.get("rage")
+
+        if not rage:
+            return
+        bonus = state.resources[actor.id]["rage_bonus"]
+
+        event.payload["damage"] += bonus
+
+        
 class BardicInspirationHandler(EventHandler):
     def handle(self, event: Event, state: GameState) -> None:
         if event.type != "roll_result":
@@ -58,3 +88,71 @@ class BardicInspirationHandler(EventHandler):
         )
 
         state.event_log.append(modified_event)
+
+
+class ApplyStatusHandler(EventHandler):
+    def handle(self, event: Event, state: GameState):
+        if event.type != "status_requested":
+            return
+
+        ctx = event.context
+        if ctx is None or ctx.target_id is None:
+            return
+
+        target = state.characters.get(ctx.target_id)
+        if target is None:
+            return
+
+        if not hasattr(target, "status"):
+            target.status = {}
+
+        target.status[event.payload["status"]] = {
+            "turns":event.payload["duration_turns"]
+        }
+
+        state.dispatch(Event(
+            type="status_applied",
+            context=ctx,
+            payload=event.payload,
+            cancelable=False
+        ))
+
+
+
+class StunnedAttackHandler(EventHandler):
+    def handle(self, event: Event, state: "GameState"):
+        if event.type != "attack_roll":
+            return  # Solo nos interesa ataques
+        
+
+        if not event.context:
+            return
+        attacker_id = event.context.actor_id
+        target_id = event.context.target_id
+        if not attacker_id or not target_id:
+            print(attacker_id)
+            print(target_id)
+            return
+        
+        attacker = state.characters.get(attacker_id)
+        if attacker:
+            if hasattr(attacker, "status") and "aturdido" in attacker.status:
+                roll_result = event.payload  # asumimos que contiene info del roll
+                miss_event = Event(
+                    type="attack_miss",
+                    context=EventContext(actor_id=attacker_id, target_id=target_id),
+                    payload={
+                        "roll": roll_result.get("rolls"),
+                        "attack_score": roll_result.get("attack_score"),
+                        "stat_modifier": roll_result.get("stat_modifier"),
+                        "target_ac": roll_result.get("target_ac"),
+                        "reason": "aturdido",
+                    },
+                    cancelable=False
+                )
+
+                # Disparar el evento de ataque fallido
+                state.dispatch(miss_event)
+
+                # Cancelar el ataque original
+                raise RuntimeError("Ataque cancelado por aturdimiento")

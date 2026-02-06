@@ -42,7 +42,53 @@ class UnarmoredDefense(ClassFeature):
             cancelable=False
         )
 
+class Rage(ClassFeature):
+    name = "Rage"
 
+    RAGE_DURATION_TURNS = 3 
+
+    def on_event(self, event: Event, state: GameState) -> Optional[Event]:
+        if event.type != "rage_requested":
+            return None
+
+        ctx = event.context
+        if ctx is None or ctx.actor_id is None:
+            return None
+
+        actor = state.characters.get(ctx.actor_id)
+        if actor is None:
+            return None
+
+        resources = state.resources.get(actor.id, {})
+        uses = resources.get("rage_uses", 0)
+
+        # Validación
+        if uses <= 0:
+            return Event(
+                type="rage_failed",
+                context=ctx,
+                payload={"reason": "No uses left"},
+                cancelable=False
+            )
+
+        # Consumir recurso
+        resources["rage_uses"] = uses - 1
+
+        # Aplicar estado
+        actor.status["rage"] = {
+            "turns": self.RAGE_DURATION_TURNS,
+            "bonus": resources.get("rage_bonus", 0)
+        }
+
+        return Event(
+            type="rage_started",
+            context=ctx,
+            payload={
+                "turns": self.RAGE_DURATION_TURNS,
+                "bonus": resources.get("rage_bonus", 0)
+            },
+            cancelable=False
+        )
 class SongOfRest(ClassFeature):
     # Metadatos de la feature
     name = "SongOfRest"

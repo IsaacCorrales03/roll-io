@@ -42,6 +42,7 @@ class Character(Actor):
 
         # Lista de habilidades de clase activas
         self.features: list[ClassFeature] = []
+        self.status: dict = {}
         self.apply_level_features()
 
     def can_levelUp(self):

@@ -1,25 +1,24 @@
 import random
-from .events.Event import Event
-from .events.EventContext import EventContext
-from .events.GameState import GameState
-from abc import ABC, abstractmethod
-from .commands import *
-from .querys import *
+from ..events.Event import Event
+from ..events.EventContext import EventContext
+from ..events.GameState import GameState
+from .Action import Action
+from ..commands import *
+from ..querys import *
 import random
 
-class Action(ABC):
-    @abstractmethod
-    def execute(self, state: GameState) -> Event:
-        pass
 
-class RollAction:
-    def execute(self, command: RollCommand, state: "GameState") -> dict:
-        actor = state.characters.get(command.actor_id)
+class RollAction:   
+    def __init__(self, command: RollCommand) -> None:
+        self.command = command
+
+    def execute(self, state: "GameState") -> dict:
+        actor = state.characters.get(self.command.actor_id)
         if actor is None:
             raise RuntimeError("Actor no encontrado")
 
         # Parsear dice string tipo "1d20+3"
-        count, rest = command.dice.lower().split("d")
+        count, rest = self.command.dice.lower().split("d")
         count = int(count)
         if "+" in rest:
             size, bonus = rest.split("+")
@@ -32,9 +31,9 @@ class RollAction:
         # Tiradas con ventaja/desventaja
         rolls = []
         for _ in range(count):
-            if command.advantage:
+            if self.command.advantage:
                 rolls.append(max(random.randint(1, size), random.randint(1, size)))
-            elif command.disadvantage:
+            elif self.command.disadvantage:
                 rolls.append(min(random.randint(1, size), random.randint(1, size)))
             else:
                 rolls.append(random.randint(1, size))
@@ -44,17 +43,42 @@ class RollAction:
             type="roll_resolved",
             context=EventContext(actor_id=actor.id),
             payload={
-                "dice": command.dice,
+                "dice": self.command.dice,
                 "rolls": rolls,
                 "bonus": bonus,
                 "total": total,
-                "reason": command.reason
+                "reason": self.command.reason
             },
             cancelable=False
         )
 
         state.dispatch(event)
         return event.payload
+
+class UseRageAction(Action):
+    def __init__(self, actor_id):
+        self.actor_id = actor_id
+
+    def execute(self, state: GameState) -> Event:
+        actor = state.characters.get(self.actor_id)
+        if actor is None:
+            return Event(
+                type="rage_failed",
+                context=EventContext(actor_id=self.actor_id),
+                payload={"reason": "Actor no encontrado"},
+                cancelable=False
+            )
+
+        # Declarar intención: entrar en rabia
+        event = Event(
+            type="rage_requested",
+            context=EventContext(actor_id=actor.id),
+            cancelable=True
+        )
+
+        state.dispatch(event)
+        return event
+
 
 class UseSongOfRestAction(Action):
     def __init__(self, command: UseSongOfRestCommand):
@@ -106,7 +130,7 @@ class AttackAction(Action):
             advantage=self.command.adventage,
             disadvantage=self.command.disadventage
         )
-        roll_result = RollAction().execute(roll_command, state)
+        roll_result = RollAction(roll_command).execute(state)
         ac_query = GetArmorClass(actor_id=target.id, context="attack")
         target_ac = state.query(ac_query).value
         stat_mod_query = GetStatModifier(actor_id=attacker.id,attribute = weapon.attribute )
@@ -117,7 +141,7 @@ class AttackAction(Action):
         # Evento de tirada de ataque
         attack_roll_event = Event(
             type="attack_roll",
-            context=EventContext(actor_id=attacker.id),
+            context=EventContext(actor_id=attacker.id, target_id=target.id),
             payload={
                 "roll": roll_result["rolls"],
                 "bonus": attacker.weapon.bonus if attacker.weapon else 0 ,
@@ -138,7 +162,7 @@ class AttackAction(Action):
                 dice=attacker.weapon.dice_size if attacker.weapon else "1d6",
                 reason="damage"
             )
-            damage = RollAction().execute(damage_command, state)
+            damage = RollAction(damage_command).execute(state)
             damage_event = Event(
                 type="attack_hit",
                 context=EventContext(actor_id=attacker.id),
@@ -161,9 +185,30 @@ class AttackAction(Action):
                     "attack_score": attack_score,
                     "stat_modifier": stat_mod,
                     "target_ac": target_ac,
-                    "stat_modifier": stat_mod
+                    "stat_modifier": stat_mod,
+                    "reason": "not enough attack score"
                 },
                 cancelable=False
             )
             state.dispatch(miss_event)
             return miss_event
+
+class StatusAction(Action):
+    def __init__(self, command: StatusCommand):
+        self.command = command
+
+    def execute(self, state: GameState) -> Event:
+        event = Event(
+            type="status_requested",
+            context=EventContext(
+                actor_id=self.command.actor_id,
+                target_id=self.command.target_id
+            ),
+            payload={
+                "status": self.command.status,
+                "duration_turns": self.command.duration_turns
+            },
+            cancelable=True
+        )
+        state.dispatch(event)
+        return event

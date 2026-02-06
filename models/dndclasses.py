@@ -11,10 +11,10 @@ class Barbarian(DnDClass):
     )
     hit_die = 12
     weapon_proficiencies = []
-
+    
     def features_by_level(self) -> dict[int, list[type[ClassFeature]]]:
         return {
-            1: [UnarmoredDefense],
+            1: [UnarmoredDefense, Rage]
         }
 
 class Bard(DnDClass):
@@ -160,7 +160,6 @@ class Rogue(DnDClass):
 
     def ac_formula(self, actor):
         return 10 + actor.dex_mod
-
 
 
 CLASS_MAP: dict[str, Type[DnDClass]] = {
