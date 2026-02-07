@@ -10,7 +10,9 @@ from uuid import UUID
 
 class UnarmoredDefense(ClassFeature):
     name = "Unarmored Defense"
-
+    description = "Mientras no lleves armadura, tu CA es igual a 10 + tu modificador de Destreza + tu modificador de Constitución."
+    level = 1
+    required_level = 1
     def on_event(self, event: Event, state: GameState) -> Optional[Event]:
         if event.type != "ac_requested":
             return None
@@ -44,7 +46,9 @@ class UnarmoredDefense(ClassFeature):
 
 class Rage(ClassFeature):
     name = "Rage"
-
+    description = "En combate, puedes entrar en un estado de furia que te otorga ventajas y habilidades especiales, pero solo puedes usarlo un número limitado de veces."
+    required_level = 1
+    level = 1
     RAGE_DURATION_TURNS = 3 
 
     def on_event(self, event: Event, state: GameState) -> Optional[Event]:

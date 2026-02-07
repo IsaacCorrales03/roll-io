@@ -108,3 +108,50 @@ class GetStatModifierHandler(QueryHandler[GetStatModifier, StatModifierResult]):
             value=final_value,
             breakdown=[{"source": "base", "value": base_value}, *modifiers]
         )
+    
+@dataclass(frozen=True)
+class GetActorsAtLocation(Query):
+    location_id: UUID
+
+class GetActorsAtLocationHandler(QueryHandler[GetActorsAtLocation, GetActorsAtLocationResult]):
+    def handle(self, query: GetActorsAtLocation, state: GameState) -> GetActorsAtLocationResult:
+        return GetActorsAtLocationResult(
+            actors=[
+                c for c in state.characters.values()
+                if getattr(c, "location_id", None) == query.location_id
+            ]
+        )
+    
+@dataclass(frozen=True)
+class CanActorReach(Query):
+    actor_id: UUID
+    target_id: UUID
+
+@dataclass(frozen=True)
+class GetActorLocation(Query):
+    actor_id: UUID
+
+@dataclass(frozen=True)
+class GetLocationContents(Query):
+    location_id: UUID
+
+@dataclass(frozen=True)
+class GetAvailableMoves(Query):
+    location_id: UUID
+
+class GetActorLocationHandler(QueryHandler):
+    def handle(self, query: GetActorLocation, state: GameState):
+        actor = state.characters.get(query.actor_id)
+        if actor is None:
+            raise RuntimeError("Actor no existe")
+        return actor.current_location
+
+class GetLocationContentsHandler(QueryHandler):
+    def handle(self, query: GetLocationContents, state: GameState):
+        world = state.world
+        loc_id = query.location_id
+
+        return {
+            "npcs": [n for n in world.npcs.values() if n.current_location == loc_id],
+            "pois": [p for p in world.pois.values() if p.location == loc_id],
+        }

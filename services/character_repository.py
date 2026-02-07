@@ -1,7 +1,7 @@
 import uuid
-from typing import Optional, Dict, cast
+from typing import Optional, Dict, Any, cast
 from services.db_service import DatabaseService
-from typing import Optional, Dict, Any
+
 
 class CharacterRepository:
     def __init__(self):
@@ -13,6 +13,7 @@ class CharacterRepository:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS characters (
                     id CHAR(36) PRIMARY KEY,
+                    owner_id CHAR(36) NOT NULL,
                     name VARCHAR(64) NOT NULL,
 
                     race_key VARCHAR(32) NOT NULL,
@@ -31,25 +32,30 @@ class CharacterRepository:
 
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        ON UPDATE CURRENT_TIMESTAMP
+                        ON UPDATE CURRENT_TIMESTAMP,
+
+                    CONSTRAINT fk_owner FOREIGN KEY (owner_id)
+                        REFERENCES users(id)
+                        ON DELETE CASCADE
+                        ON UPDATE CASCADE
                 )
             """)
         self.db.commit()
 
-    def create(self, character) -> str:
-
+    def create(self, character, owner_id: uuid.UUID) -> str:
         with self.db.cursor() as cursor:
             try:
                 cursor.execute("""
                     INSERT INTO characters (
-                        id, name, race_key, class_key,
+                        id, owner_id, name, race_key, class_key,
                         level,
                         strength, dexterity, constitution,
                         intelligence, wisdom, charisma,
                         hp
-                    ) VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
-                    character["id"],
+                    str(character["id"]),
+                    str(owner_id),
                     character["name"],
                     character["race"]["key"],
                     character["class"]["name"],
@@ -63,9 +69,8 @@ class CharacterRepository:
                     character["hp"]["max"]
                 ))
             except Exception as e:
-                print("error: ")
-                print(e)
-                
+                print("Error al crear personaje:", e)
+
         self.db.commit()
         return character["id"]
 
@@ -76,6 +81,14 @@ class CharacterRepository:
                 (character_id,)
             )
             return cast(Optional[Dict[str, Any]], cursor.fetchone())
+
+    def get_by_owner(self, owner_id: str) -> list[Dict[str, Any]]:
+        with self.db.cursor(dictionary=True) as cursor:
+            cursor.execute(
+                "SELECT * FROM characters WHERE owner_id = %s",
+                (owner_id,)
+            )
+            return cast(list[Dict[str, Any]], cursor.fetchall())
 
     def delete(self, character_id: str) -> bool:
         with self.db.cursor() as cursor:

@@ -1,5 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
+from typing import Optional
 
 from .state import StateBlock
 
@@ -9,7 +10,7 @@ class NPC:
     name: str
     role: str
 
-    faction: UUID | None
+    faction: Optional[UUID]
     current_location: UUID
 
-    state: StateBlock = StateBlock()
+    state: StateBlock = field(default_factory=StateBlock)

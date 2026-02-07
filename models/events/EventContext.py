@@ -8,7 +8,8 @@ from uuid import UUID
 class EventContext:
     actor_id: Optional[UUID] = None
     target_id: Optional[UUID] = None
-
+    
     turn: Optional[int] = None
     phase: Optional[str] = None
     location_id: Optional[str] = None
+    

@@ -23,3 +23,7 @@ class Location:
     visibility: VisibilityRule = field(
         default_factory=lambda: VisibilityRule("hidden", [])
     )
+
+    def reveal(self):
+        """Make this location visible."""
+        self.visibility = VisibilityRule("visible", [])

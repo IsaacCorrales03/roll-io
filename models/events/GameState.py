@@ -2,19 +2,27 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional, List, Any
 from collections import defaultdict
 from uuid import UUID
+
+from models.world.worldstate import WorldState
 from .EventContext import EventContext
 from copy import deepcopy
 from .Event import Event
+from .EventHandler import EventHandler
+from ..world.world import World
+from ..world.registry import WorldRegistry
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .EventDispatcher import EventDispatcher
-    from .EventHandler import EventHandler
     from ..character import Character
     from ..querys import QueryHandler, Query
 
 @dataclass
 class GameState:
+    # Mundo de juego
+    world_registry: WorldRegistry
+    world: WorldState = field(default_factory=WorldState)
+    
     characters: Dict[UUID, "Character"] = field(default_factory=dict)
     # NUEVO: recursos por actor
     resources: dict[UUID, dict[str, int]] = field(default_factory=dict)

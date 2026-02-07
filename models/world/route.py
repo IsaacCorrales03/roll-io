@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 from .state import StateBlock
@@ -10,9 +10,11 @@ class Route:
     from_location: UUID
     to_location: UUID
 
-    travel_time: str  # abstracto: "2d", "4h"
-    danger: str       # low, medium, high
-    mode: str         # road, sea, portal
+    travel_time: str
+    danger: str
+    mode: str
 
-    state: StateBlock = StateBlock()
-    visibility: VisibilityRule = VisibilityRule("hidden", [])
+    state: StateBlock = field(default_factory=StateBlock)
+    visibility: VisibilityRule = field(
+        default_factory=lambda: VisibilityRule("hidden", [])
+    )

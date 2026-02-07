@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Any, List
 
+from models.base import Actor
+
 
 @dataclass
 class QueryResult:
@@ -17,3 +19,7 @@ class ArmorClassResult(QueryResult):
 class StatModifierResult(QueryResult):
     value: int
     breakdown: list[dict]
+
+@dataclass
+class GetActorsAtLocationResult(QueryResult):
+    actors: list["Actor"] 

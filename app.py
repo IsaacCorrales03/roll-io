@@ -1,23 +1,48 @@
-from flask import Flask, render_template, request, send_from_directory, jsonify
+from uuid import UUID
+from flask import Flask, g, make_response, redirect, render_template, request, send_from_directory, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, join_room, leave_room, emit
+
+# Repositories & Services
+from services.auth_service import AuthService
+from services.db_service import DatabaseService
+from auth.infrastructure.user_repository import MySQLUserRepository
+from auth.infrastructure.auth_session_repository import MySQLAuthSessionRepository
+from services.service_validator import DBSessionValidator
+from auth.ports.password_hasher import PasswordHasher
+from auth.infrastructure.bcrypt_hasher import BcryptPasswordHasher
+
+# Blueprints
 from routes.races import races_bp
 from routes.dnd_clasess import classes_bp
-from routes.characters import character_bp
+from routes.characters import character_bp, repo as character_repo
+from routes.campaign_routes import campaign_bp, campaign_repo
+# Utils
 from utils.gen_code import generate_campaign_code
+
 import os
 
-app = Flask(__name__, 
-            static_folder='static',
-            static_url_path='',
-            template_folder='templates')
+connected_clients = {}
+campaigns = {}
 
-app.register_blueprint(races_bp, url_prefix="/api/races")
-app.register_blueprint(classes_bp, url_prefix="/api/classes")
-app.register_blueprint(character_bp, url_prefix="/api/character")
+# ==========================
+# App setup
+# ==========================
+app = Flask(
+    __name__,
+    static_folder='static',
+    static_url_path='',
+    template_folder='templates'
+)
 
+# ==========================
+# CORS
+# ==========================
 CORS(app)
 
+# ==========================
+# SocketIO
+# ==========================
 socketio = SocketIO(
     app,
     cors_allowed_origins="*",
@@ -27,17 +52,163 @@ socketio = SocketIO(
     manage_session=False
 )
 
-connected_clients = {}
-campaigns = {}
+# ==========================
+# Blueprints
+# ==========================
+app.register_blueprint(races_bp, url_prefix="/api/races")
+app.register_blueprint(classes_bp, url_prefix="/api/classes")
+app.register_blueprint(character_bp, url_prefix="/api/character")
+app.register_blueprint(campaign_bp, url_prefix="/api/campaigns")
+# ==========================
+# Dependency wiring
+# ==========================
+db = DatabaseService()
 
-# ========================================
-# RUTAS PARA SERVIR REACT
-# ========================================
+user_repo = MySQLUserRepository(db)
+session_repo = MySQLAuthSessionRepository(db)
+
+session_validator = DBSessionValidator(session_repo)
+password_hasher = BcryptPasswordHasher()
+auth_service = AuthService(user_repo, session_repo, password_hasher)
+
+# ==========================
+# Auth middleware
+# ==========================
+@app.before_request
+def auth_middleware():
+    sid = request.cookies.get("session_id")
+    if not sid:
+        g.user_id = None
+        return
+
+    try:
+        g.user_id = session_validator.validate(UUID(sid))
+    except Exception:
+        # invalid UUID or session
+        g.user_id = None
+
+@app.context_processor
+def inject_user():
+    user = None
+    if getattr(g, "user_id", None):
+        user = auth_service.get_user_by_id(g.user_id)
+    return {"user": user}
+
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "GET":
+        return render_template("login.html")
+
+    # POST
+    email = request.form.get("email")
+    password = request.form.get("password")
+
+    if not email or not password:
+        return render_template("login.html", error="Email and password are required"), 400
+
+    try:
+        session = auth_service.login(email, password)
+    except ValueError:
+        return render_template("login.html", error="Invalid credentials"), 401
+
+    # Guardamos cookie con session_id
+    resp = make_response(redirect("/dashboard"))  # ruta del dashboard
+    resp.set_cookie(
+        "session_id",
+        str(session.id),
+        httponly=True,
+        samesite="Lax"
+    )
+    return resp
+    
+from flask import request, render_template, redirect, make_response
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "GET":
+        return render_template("register.html")
+
+    # Capturar campos
+    username = request.form.get("username")
+    email = request.form.get("email")
+    password = request.form.get("password")
+    confirm_password = request.form.get("confirm_password")
+    terms = request.form.get("terms")  # checkbox
+
+    # Validaciones básicas
+    if not username or not email or not password or not confirm_password:
+        return render_template("register.html", error="Todos los campos son obligatorios")
+    
+    if password != confirm_password:
+        return render_template("register.html", error="Las contraseñas no coinciden")
+
+    if not terms:
+        return render_template("register.html", error="Debes aceptar los términos")
+
+    try:
+        # Registrar usuario
+        user = auth_service.register(username=username, email=email, password=password)
+    except ValueError as e:
+        return render_template("register.html", error=str(e))
+
+    try:
+        # Crear sesión automáticamente
+        session = auth_service.login(email=email, password=password)
+    except ValueError as e:
+        return render_template("register.html", error="No se pudo iniciar sesión: " + str(e))
+
+    # Redirigir con cookie
+    resp = make_response(redirect("/dashboard"))
+    resp.set_cookie(
+        "session_id",
+        str(session.id),
+        httponly=True,
+        samesite="Lax"
+    )
+    return resp
+
+@app.route("/dashboard")
+def dashboard():
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        return redirect("/login")  # no hay sesión
+
+    # Buscar sesión
+    session = auth_service.session_repo.get(UUID(session_id))
+    if not session or session.revoked:
+        return redirect("/login")
+
+    # Obtener usuario
+    user = auth_service.user_repo.get_by_id(session.user_id)
+    if not user:
+        return redirect("/login")
+
+    # Obtener personajes del usuario
+    characters = character_repo.get_by_owner(str(user.id))  # lista de dicts
+
+
+    return render_template("dashboard.html", user=user, characters=characters)
+
+
+@app.route("/logout")
+def logout():
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        try:
+            # Opcional: revocar la sesión en el backend
+            auth_service.session_repo.revoke(UUID(session_id))
+        except Exception:
+            pass  # si falla, ignoramos
+
+    # Eliminar la cookie y redirigir a login
+    resp = make_response(redirect("/login"))
+    resp.set_cookie("session_id", "", expires=0)
+    return resp
 
 @app.route('/<path:path>')
 def catch_all(path):
@@ -111,7 +282,6 @@ def lobby_old():
 @socketio.on("connect")
 def handle_connect():
     sid = request.sid  # type: ignore
-    print(f"✓ Cliente conectado - SID: {sid}")
     
     connected_clients[sid] = {
         'connected_at': None,
@@ -126,7 +296,6 @@ def handle_connect():
 @socketio.on("disconnect")
 def handle_disconnect():
     sid = request.sid  # type: ignore
-    print(f"✗ Cliente desconectado - SID: {sid}")
     
     if sid in connected_clients:
         del connected_clients[sid]

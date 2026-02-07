@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 from .state import StateBlock
@@ -8,10 +8,12 @@ from .visibility import VisibilityRule
 class PointOfInterest:
     id: UUID
     name: str
-    type: str  # shop, npc, object, trigger, secret
+    type: str
     location: UUID
 
     description: str = ""
 
-    state: StateBlock = StateBlock()
-    visibility: VisibilityRule = VisibilityRule("hidden", [])
+    state: StateBlock = field(default_factory=StateBlock)
+    visibility: VisibilityRule = field(
+        default_factory=lambda: VisibilityRule("hidden", [])
+    )

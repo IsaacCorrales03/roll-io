@@ -12,10 +12,11 @@ class Character(Actor):
     """
     MAX_LEVEL = 20  # Nivel máximo permitido
 
-    def __init__(self, id: uuid.UUID, name: str, race: Race, dnd_class: DnDClass):
+    def __init__(self, id: uuid.UUID, owner_id : uuid.UUID, name: str, race: Race, dnd_class: DnDClass):
         # Atributos base heredados de la raza
         self.attributes = race.attributes.copy()
         super().__init__(id, name, self.attributes)
+        self.owner_id = owner_id
 
         # Identidad básica
         self.name = name
@@ -39,7 +40,7 @@ class Character(Actor):
 
         # Bono de competencia inicial
         self.proficiency_bonus = 2
-
+        self.current_location = ""
         # Lista de habilidades de clase activas
         self.features: list[ClassFeature] = []
         self.status: dict = {}
@@ -134,6 +135,6 @@ class Character(Actor):
         }
 
 
-def create_character_Class(id: uuid.UUID, nombre: str, raza: Race, dnd_class: DnDClass):
+def create_character_Class(id: uuid.UUID, owner_id: uuid.UUID, nombre: str, raza: Race, dnd_class: DnDClass):
     # Factory simple para creación de personajes
-    return Character(id, nombre, raza, dnd_class)
+    return Character(id, owner_id, nombre, raza, dnd_class)

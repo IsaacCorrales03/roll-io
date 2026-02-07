@@ -1,594 +1,513 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="dark" />
+{% block title %}Chronicle20 - Tu mesa virtual para D&D{% endblock %}
 
-    <title>Chronicle20 - Tu mesa virtual para D&D</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        display: ['Cinzel', 'serif'],
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-</head>
+{% block content %}
+<!-- Hero Section -->
+<section class="relative min-h-screen flex items-center justify-center px-4 overflow-hidden">
+    <!-- Animated background grid -->
+    <div class="absolute inset-0 overflow-hidden">
+        <div
+            class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)] opacity-20">
+        </div>
+        <div id="blob1" class="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl"></div>
+        <div id="blob2" class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+    </div>
 
-<body class="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
-    <!-- Hero Section -->
-    <section class="relative min-h-screen flex items-center justify-center px-4 overflow-hidden">
-        <!-- Animated background grid -->
-        <div class="absolute inset-0 overflow-hidden">
+    <div class="relative z-10 w-full max-w-7xl">
+        <div class="text-center space-y-8">
+            <!-- Main heading -->
+            <h1
+                class="font-display text-6xl md:text-8xl lg:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-400 leading-tight tracking-tight">
+                Chronicle20
+            </h1>
             <div
-                class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)] opacity-20">
+                class="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/50 border border-amber-500/20 rounded-full backdrop-blur-sm">
+                <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                <span class="text-sm font-medium text-amber-200">Tu mesa virtual para D&D</span>
             </div>
-            <div id="blob1" class="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl"></div>
-            <div id="blob2" class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+            <p class="text-xl md:text-2xl text-slate-300 font-light max-w-3xl mx-auto leading-relaxed">
+                Crea mundos épicos. Gestiona campañas inolvidables.<br>
+                <span class="text-amber-400 font-normal">Todo desde tu navegador.</span>
+            </p>
+
+            <!-- CTA Buttons -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                <button onclick="scrollToSection('actions-section')"
+                    class="group px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-semibold text-lg shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 transition-all duration-300 ease-out hover:scale-105 active:scale-95 relative overflow-hidden">
+                    <span class="relative z-10 flex items-center gap-2">
+                        Comenzar gratis
+                        <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                    </span>
+                    <div
+                        class="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    </div>
+                </button>
+
+                <button onclick="scrollToSection('info')"
+                    class="px-8 py-4 bg-slate-800/50 text-slate-200 border border-slate-700 rounded-xl font-semibold text-lg backdrop-blur-sm hover:bg-slate-800 hover:border-slate-600 transition-all duration-300 ease-out hover:scale-105 active:scale-95">
+                    Sobre Nosotros
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="flex flex-wrap items-center justify-center gap-8 pt-8 text-sm">
+                <div class="flex items-center gap-2 text-slate-400">
+                    <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span>Gratuito</span>
+                </div>
+                <div class="flex items-center gap-2 text-slate-400">
+                    <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                    </svg>
+                    <span>Simple</span>
+                </div>
+                <div class="flex items-center gap-2 text-slate-400">
+                    <svg class="w-5 h-5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+                        <path
+                            d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
+                    </svg>
+                    <span>En línea</span>
+                </div>
+            </div>
         </div>
 
-        <div class="relative z-10 w-full max-w-7xl">
-            <div class="text-center space-y-8">
-                <!-- Main heading -->
-                <h1
-                    class="font-display text-6xl md:text-8xl lg:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-400 leading-tight tracking-tight">
-                    Chronicle20
-                </h1>
+        <div class="mt-16 max-w-5xl mx-auto">
+            <div class="relative rounded-2xl overflow-hidden border border-slate-700/50 bg-cover bg-center"
+                style="background-image: url('{{ url_for('static', filename='imgs/preview.png') }}');">
+                <!-- Overlays -->
+                <div class="absolute inset-0 bg-slate-900/70"></div>
+                <div class="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-purple-500/10"></div>
+
+                <div class="relative aspect-video flex items-center justify-center p-12">
+                    <div class="text-center space-y-4 max-w-2xl">
+                        <div
+                            class="inline-block p-4 bg-slate-800/60 rounded-2xl border border-slate-700/50 backdrop-blur">
+                            <svg class="w-16 h-16 text-amber-400" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                        </div>
+
+                        <h3 class="text-2xl font-bold text-white">
+                            Plataforma optimizada y segura
+                        </h3>
+
+                        <p class="text-slate-300 leading-relaxed">
+                            Arquitectura moderna, simple y multiplataforma.
+                            Sin instalaciones, sin configuraciones complejas.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+        <svg class="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        </svg>
+    </div>
+</section>
+
+<!-- How it Works -->
+<section class="py-24 px-4 bg-slate-900/50 border-y border-slate-800" id="info">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
+                Comienza en minutos
+            </h2>
+            <p class="text-lg text-slate-400 max-w-2xl mx-auto">
+                Diseñado para que puedas empezar a jugar sin perder tiempo
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-4 gap-8">
+            <!-- Step 1 -->
+            <div class="group relative">
                 <div
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/50 border border-amber-500/20 rounded-full backdrop-blur-sm">
-                    <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
-                    <span class="text-sm font-medium text-amber-200">Tu mesa virtual para D&D</span>
-                </div>
-                <p class="text-xl md:text-2xl text-slate-300 font-light max-w-3xl mx-auto leading-relaxed">
-                    Crea mundos épicos. Gestiona campañas inolvidables.<br>
-                    <span class="text-amber-400 font-normal">Todo desde tu navegador.</span>
-                </p>
-
-                <!-- CTA Buttons -->
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                    <button onclick="scrollToSection('actions-section')"
-                        class="group px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-semibold text-lg shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 transition-all duration-300 ease-out hover:scale-105 active:scale-95 relative overflow-hidden">
-                        <span class="relative z-10 flex items-center gap-2">
-                            Comenzar gratis
-                            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none"
-                                stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                            </svg>
-                        </span>
-                        <div
-                            class="absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                        </div>
-                    </button>
-
-                    <button onclick="scrollToSection('info')"
-                        class="px-8 py-4 bg-slate-800/50 text-slate-200 border border-slate-700 rounded-xl font-semibold text-lg backdrop-blur-sm hover:bg-slate-800 hover:border-slate-600 transition-all duration-300 ease-out hover:scale-105 active:scale-95">
-                        Sobre Nosotros
-                    </button>
-                </div>
-
-                <!-- Stats -->
-                <div class="flex flex-wrap items-center justify-center gap-8 pt-8 text-sm">
-                    <div class="flex items-center gap-2 text-slate-400">
-                        <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        <span>Gratuito</span>
-                    </div>
-                    <div class="flex items-center gap-2 text-slate-400">
-                        <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                                d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                        </svg>
-                        <span>Simple</span>
-                    </div>
-                    <div class="flex items-center gap-2 text-slate-400">
-                        <svg class="w-5 h-5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
-                            <path
-                                d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
-                        </svg>
-                        <span>En línea</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-16 max-w-5xl mx-auto">
-                <div class="relative rounded-2xl overflow-hidden border border-slate-700/50 bg-cover bg-center"
-                    style="background-image: url('{{ url_for('static', filename='imgs/preview.png') }}');">
-                    <!-- Overlays -->
-                    <div class="absolute inset-0 bg-slate-900/70"></div>
-                    <div class="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-purple-500/10"></div>
-
-                    <div class="relative aspect-video flex items-center justify-center p-12">
-                        <div class="text-center space-y-4 max-w-2xl">
-                            <div
-                                class="inline-block p-4 bg-slate-800/60 rounded-2xl border border-slate-700/50 backdrop-blur">
-                                <svg class="w-16 h-16 text-amber-400" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                </svg>
-                            </div>
-
-                            <h3 class="text-2xl font-bold text-white">
-                                Plataforma optimizada y segura
-                            </h3>
-
-                            <p class="text-slate-300 leading-relaxed">
-                                Arquitectura moderna, simple y multiplataforma.
-                                Sin instalaciones, sin configuraciones complejas.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Scroll indicator -->
-        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-            <svg class="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-        </div>
-    </section>
-
-    <!-- How it Works -->
-    <section class="py-24 px-4 bg-slate-900/50 border-y border-slate-800" id="info">
-        <div class="max-w-7xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
-                    Comienza en minutos
-                </h2>
-                <p class="text-lg text-slate-400 max-w-2xl mx-auto">
-                    Diseñado para que puedas empezar a jugar sin perder tiempo
-                </p>
-            </div>
-
-            <div class="grid md:grid-cols-4 gap-8">
-                <!-- Step 1 -->
-                <div class="group relative">
-                    <div
-                        class="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
-                    </div>
-                    <div
-                        class="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm h-full hover:border-slate-600 transition-colors">
-                        <div class="flex items-start gap-4 mb-4">
-                            <div
-                                class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-amber-500/10 to-purple-500/10 rounded-xl flex items-center justify-center text-amber-400 border border-amber-500/20">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                        d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                                </svg>
-                            </div>
-                            <div class="text-3xl font-black text-slate-700">01</div>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Accede</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed">
-                            Abre tu navegador. No necesitas instalar ni configurar nada.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Step 2 -->
-                <div class="group relative">
-                    <div
-                        class="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
-                    </div>
-                    <div
-                        class="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm h-full hover:border-slate-600 transition-colors">
-                        <div class="flex items-start gap-4 mb-4">
-                            <div
-                                class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-amber-500/10 to-purple-500/10 rounded-xl flex items-center justify-center text-amber-400 border border-amber-500/20">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                        d="M12 4v16m8-8H4" />
-                                </svg>
-                            </div>
-                            <div class="text-3xl font-black text-slate-700">02</div>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Crea o únete</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed">
-                            Inicia una campaña nueva o ingresa con un código de invitación.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Step 3 -->
-                <div class="group relative">
-                    <div
-                        class="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
-                    </div>
-                    <div
-                        class="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm h-full hover:border-slate-600 transition-colors">
-                        <div class="flex items-start gap-4 mb-4">
-                            <div
-                                class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-amber-500/10 to-purple-500/10 rounded-xl flex items-center justify-center text-amber-400 border border-amber-500/20">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                            </div>
-                            <div class="text-3xl font-black text-slate-700">03</div>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Invita</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed">
-                            Comparte el código y espera a que tu grupo se conecte.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Step 4 -->
-                <div class="group relative">
-                    <div
-                        class="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
-                    </div>
-                    <div
-                        class="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm h-full hover:border-slate-600 transition-colors">
-                        <div class="flex items-start gap-4 mb-4">
-                            <div
-                                class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-amber-500/10 to-purple-500/10 rounded-xl flex items-center justify-center text-amber-400 border border-amber-500/20">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                        d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div class="text-3xl font-black text-slate-700">04</div>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Juega</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed">
-                            Sistema de turnos, chat en vivo y narrativa compartida.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features -->
-    <section class="py-24 px-4">
-        <div class="max-w-7xl mx-auto">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
-                    Potente y simple
-                </h2>
-                <p class="text-lg text-slate-400 max-w-2xl mx-auto">
-                    Todas las herramientas que necesitas para gestionar tus partidas
-                </p>
-            </div>
-
-            <div class="grid md:grid-cols-3 gap-8">
-                <!-- Feature 1 -->
-                <div class="group relative">
-                    <div
-                        class="absolute -inset-1 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
-                    </div>
-                    <div
-                        class="relative bg-slate-800/50 border border-blue-500/20 rounded-2xl p-8 backdrop-blur-sm h-full hover:bg-slate-800/70 transition-colors">
-                        <div
-                            class="inline-flex p-3 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-xl mb-4 border border-blue-500/20">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-2xl font-bold text-white mb-3">
-                            En tiempo real
-                        </h3>
-                        <p class="text-slate-400 leading-relaxed">
-                            WebSockets para comunicación instantánea. Chat, eventos y actualizaciones sin recargar.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Feature 2 -->
-                <div class="group relative">
-                    <div
-                        class="absolute -inset-1 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
-                    </div>
-                    <div
-                        class="relative bg-slate-800/50 border border-purple-500/20 rounded-2xl p-8 backdrop-blur-sm h-full hover:bg-slate-800/70 transition-colors">
-                        <div
-                            class="inline-flex p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl mb-4 border border-purple-500/20">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                            </svg>
-                        </div>
-                        <h3 class="text-2xl font-bold text-white mb-3">
-                            Gestión completa
-                        </h3>
-                        <p class="text-slate-400 leading-relaxed">
-                            Crea mundos, diseña personajes, gestiona inventarios y habilidades desde una interfaz
-                            intuitiva.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Feature 3 -->
-                <div class="group relative">
-                    <div
-                        class="absolute -inset-1 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
-                    </div>
-                    <div
-                        class="relative bg-slate-800/50 border border-amber-500/20 rounded-2xl p-8 backdrop-blur-sm h-full hover:bg-slate-800/70 transition-colors">
-                        <div
-                            class="inline-flex p-3 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl mb-4 border border-amber-500/20">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                    d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-2xl font-bold text-white mb-3">
-                            Sin barreras
-                        </h3>
-                        <p class="text-slate-400 leading-relaxed">
-                            Funciona en cualquier navegador moderno. Sin instalaciones, sin actualizaciones manuales.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Highlight box -->
-            <div class="mt-12 relative">
-                <div class="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-2xl blur">
+                    class="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
                 </div>
                 <div
-                    class="relative bg-gradient-to-r from-slate-800 to-slate-900 border border-amber-500/20 rounded-2xl p-8 md:p-12">
-                    <div class="flex flex-col md:flex-row items-center gap-8">
-                        <div class="flex-shrink-0">
-                            <div
-                                class="w-20 h-20 bg-gradient-to-br from-amber-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center border border-amber-500/20">
-                                <svg class="w-10 h-10 text-amber-400" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                        d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                                </svg>
-                            </div>
+                    class="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm h-full hover:border-slate-600 transition-colors">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div
+                            class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-amber-500/10 to-purple-500/10 rounded-xl flex items-center justify-center text-amber-400 border border-amber-500/20">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                            </svg>
                         </div>
-                        <div class="flex-1 text-center md:text-left">
-                            <h3 class="text-2xl md:text-3xl font-bold text-white mb-2">
-                                Completamente gratuito
-                            </h3>
-                            <p class="text-slate-400 leading-relaxed">
-                                Sin límites de campañas, jugadores o partidas. Todo gratis, para siempre.
-                                Nuestra misión es hacer D&D más accesible para todos.
-                            </p>
+                        <div class="text-3xl font-black text-slate-700">01</div>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Accede</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Abre tu navegador. No necesitas instalar ni configurar nada.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="group relative">
+                <div
+                    class="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
+                </div>
+                <div
+                    class="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm h-full hover:border-slate-600 transition-colors">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div
+                            class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-amber-500/10 to-purple-500/10 rounded-xl flex items-center justify-center text-amber-400 border border-amber-500/20">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
                         </div>
+                        <div class="text-3xl font-black text-slate-700">02</div>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Crea o únete</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Inicia una campaña nueva o ingresa con un código de invitación.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="group relative">
+                <div
+                    class="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
+                </div>
+                <div
+                    class="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm h-full hover:border-slate-600 transition-colors">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div
+                            class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-amber-500/10 to-purple-500/10 rounded-xl flex items-center justify-center text-amber-400 border border-amber-500/20">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                        <div class="text-3xl font-black text-slate-700">03</div>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Invita</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Comparte el código y espera a que tu grupo se conecte.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="group relative">
+                <div
+                    class="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
+                </div>
+                <div
+                    class="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm h-full hover:border-slate-600 transition-colors">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div
+                            class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-amber-500/10 to-purple-500/10 rounded-xl flex items-center justify-center text-amber-400 border border-amber-500/20">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="text-3xl font-black text-slate-700">04</div>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Juega</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Sistema de turnos, chat en vivo y narrativa compartida.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="py-24 px-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
+                Potente y simple
+            </h2>
+            <p class="text-lg text-slate-400 max-w-2xl mx-auto">
+                Todas las herramientas que necesitas para gestionar tus partidas
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Feature 1 -->
+            <div class="group relative">
+                <div
+                    class="absolute -inset-1 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
+                </div>
+                <div
+                    class="relative bg-slate-800/50 border border-blue-500/20 rounded-2xl p-8 backdrop-blur-sm h-full hover:bg-slate-800/70 transition-colors">
+                    <div
+                        class="inline-flex p-3 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-xl mb-4 border border-blue-500/20">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3">
+                        En tiempo real
+                    </h3>
+                    <p class="text-slate-400 leading-relaxed">
+                        WebSockets para comunicación instantánea. Chat, eventos y actualizaciones sin recargar.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="group relative">
+                <div
+                    class="absolute -inset-1 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
+                </div>
+                <div
+                    class="relative bg-slate-800/50 border border-purple-500/20 rounded-2xl p-8 backdrop-blur-sm h-full hover:bg-slate-800/70 transition-colors">
+                    <div
+                        class="inline-flex p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl mb-4 border border-purple-500/20">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3">
+                        Gestión completa
+                    </h3>
+                    <p class="text-slate-400 leading-relaxed">
+                        Crea mundos, diseña personajes, gestiona inventarios y habilidades desde una interfaz
+                        intuitiva.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="group relative">
+                <div
+                    class="absolute -inset-1 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
+                </div>
+                <div
+                    class="relative bg-slate-800/50 border border-amber-500/20 rounded-2xl p-8 backdrop-blur-sm h-full hover:bg-slate-800/70 transition-colors">
+                    <div
+                        class="inline-flex p-3 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl mb-4 border border-amber-500/20">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3">
+                        Sin barreras
+                    </h3>
+                    <p class="text-slate-400 leading-relaxed">
+                        Funciona en cualquier navegador moderno. Sin instalaciones, sin actualizaciones manuales.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Highlight box -->
+        <div class="mt-12 relative">
+            <div class="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-2xl blur">
+            </div>
+            <div
+                class="relative bg-gradient-to-r from-slate-800 to-slate-900 border border-amber-500/20 rounded-2xl p-8 md:p-12">
+                <div class="flex flex-col md:flex-row items-center gap-8">
+                    <div class="flex-shrink-0">
+                        <div
+                            class="w-20 h-20 bg-gradient-to-br from-amber-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center border border-amber-500/20">
+                            <svg class="w-10 h-10 text-amber-400" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex-1 text-center md:text-left">
+                        <h3 class="text-2xl md:text-3xl font-bold text-white mb-2">
+                            Completamente gratuito
+                        </h3>
+                        <p class="text-slate-400 leading-relaxed">
+                            Sin límites de campañas, jugadores o partidas. Todo gratis, para siempre.
+                            Nuestra misión es hacer D&D más accesible para todos.
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <!-- CTA Section -->
-    <section id="actions-section" class="py-24 px-4 bg-slate-900/50">
-        <div class="max-w-6xl mx-auto">
-            <div class="text-center mb-12">
-                <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
-                    Empieza tu aventura
-                </h2>
-                <p class="text-lg text-slate-400">
-                    Crea una campaña como DM o únete como jugador
-                </p>
+<!-- CTA Section -->
+<section id="actions-section" class="py-24 px-4 bg-slate-900/50">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-12">
+            <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
+                Empieza tu aventura
+            </h2>
+            <p class="text-lg text-slate-400">
+                Crea una campaña como DM o únete como jugador
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8">
+            <!-- DM Card -->
+            <div class="group relative">
+                <div
+                    class="absolute -inset-1 bg-gradient-to-r from-amber-500/30 to-orange-500/30 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
+                </div>
+                <div
+                    class="relative bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-8 hover:border-amber-500/50 transition-colors">
+                    <div
+                        class="inline-flex px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 text-sm font-semibold mb-6">
+                        DUNGEON MASTER
+                    </div>
+
+                    <h3 class="text-3xl font-bold text-white mb-3">
+                        Crea tu campaña
+                    </h3>
+                    <p class="text-slate-400 mb-6">
+                        Diseña mundos únicos y guía a tus jugadores en épicas aventuras
+                    </p>
+
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center gap-3 text-slate-300">
+                            <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Gestión completa de mundos y NPCs</span>
+                        </li>
+                        <li class="flex items-center gap-3 text-slate-300">
+                            <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Chat y eventos en tiempo real</span>
+                        </li>
+                        <li class="flex items-center gap-3 text-slate-300">
+                            <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Sistema de turnos y combate</span>
+                        </li>
+                        <li class="flex items-center gap-3 text-slate-300">
+                            <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Interfaz intuitiva y guiada</span>
+                        </li>
+                    </ul>
+
+                    <button id="create-campaign-btn"
+                        class="w-full py-4 px-6 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-semibold text-lg shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 transition-all duration-300 ease-out hover:scale-105 active:scale-95">
+                        Crear campaña gratis
+                    </button>
+                </div>
             </div>
 
-            <div class="grid md:grid-cols-2 gap-8">
-                <!-- DM Card -->
-                <div class="group relative">
+            <!-- Player Card -->
+            <div class="group relative">
+                <div
+                    class="absolute -inset-1 bg-gradient-to-r from-purple-500/30 to-pink-500/30 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
+                </div>
+                <div
+                    class="relative bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-8 hover:border-purple-500/50 transition-colors">
                     <div
-                        class="absolute -inset-1 bg-gradient-to-r from-amber-500/30 to-orange-500/30 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
+                        class="inline-flex px-4 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400 text-sm font-semibold mb-6">
+                        JUGADOR
                     </div>
-                    <div
-                        class="relative bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-8 hover:border-amber-500/50 transition-colors">
-                        <div
-                            class="inline-flex px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 text-sm font-semibold mb-6">
-                            DUNGEON MASTER
-                        </div>
 
-                        <h3 class="text-3xl font-bold text-white mb-3">
-                            Crea tu campaña
-                        </h3>
-                        <p class="text-slate-400 mb-6">
-                            Diseña mundos únicos y guía a tus jugadores en épicas aventuras
-                        </p>
+                    <h3 class="text-3xl font-bold text-white mb-3">
+                        Únete a la aventura
+                    </h3>
+                    <p class="text-slate-400 mb-6">
+                        Solo necesitas un código para empezar a jugar con tu grupo de amigos
+                    </p>
 
-                        <ul class="space-y-3 mb-8">
-                            <li class="flex items-center gap-3 text-slate-300">
-                                <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="currentColor"
-                                    viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span>Gestión completa de mundos y NPCs</span>
-                            </li>
-                            <li class="flex items-center gap-3 text-slate-300">
-                                <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="currentColor"
-                                    viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span>Chat y eventos en tiempo real</span>
-                            </li>
-                            <li class="flex items-center gap-3 text-slate-300">
-                                <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="currentColor"
-                                    viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span>Sistema de turnos y combate</span>
-                            </li>
-                            <li class="flex items-center gap-3 text-slate-300">
-                                <svg class="w-5 h-5 text-amber-400 flex-shrink-0" fill="currentColor"
-                                    viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span>Interfaz intuitiva y guiada</span>
-                            </li>
-                        </ul>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center gap-3 text-slate-300">
+                            <svg class="w-5 h-5 text-purple-400 flex-shrink-0" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Acceso rápido con código</span>
+                        </li>
+                        <li class="flex items-center gap-3 text-slate-300">
+                            <svg class="w-5 h-5 text-purple-400 flex-shrink-0" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Crea y gestiona personajes</span>
+                        </li>
+                        <li class="flex items-center gap-3 text-slate-300">
+                            <svg class="w-5 h-5 text-purple-400 flex-shrink-0" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Lanza dados en tiempo real</span>
+                        </li>
+                        <li class="flex items-center gap-3 text-slate-300">
+                            <svg class="w-5 h-5 text-purple-400 flex-shrink-0" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span>Chat compartido con el grupo</span>
+                        </li>
+                    </ul>
 
-                        <button id="create-campaign-btn"
-                            class="w-full py-4 px-6 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-semibold text-lg shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 transition-all duration-300 ease-out hover:scale-105 active:scale-95">
-                            Crear campaña gratis
+                    <div id="join-container">
+                        <button id="join-toggle-btn"
+                            class="w-full py-4 px-6 bg-slate-700 text-white border border-slate-600 rounded-xl font-semibold text-lg hover:bg-slate-600 hover:border-slate-500 transition-all duration-300 ease-out hover:scale-105 active:scale-95">
+                            Unirse con código
                         </button>
                     </div>
                 </div>
-
-                <!-- Player Card -->
-                <div class="group relative">
-                    <div
-                        class="absolute -inset-1 bg-gradient-to-r from-purple-500/30 to-pink-500/30 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
-                    </div>
-                    <div
-                        class="relative bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-8 hover:border-purple-500/50 transition-colors">
-                        <div
-                            class="inline-flex px-4 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400 text-sm font-semibold mb-6">
-                            JUGADOR
-                        </div>
-
-                        <h3 class="text-3xl font-bold text-white mb-3">
-                            Únete a la aventura
-                        </h3>
-                        <p class="text-slate-400 mb-6">
-                            Solo necesitas un código para empezar a jugar con tu grupo de amigos
-                        </p>
-
-                        <ul class="space-y-3 mb-8">
-                            <li class="flex items-center gap-3 text-slate-300">
-                                <svg class="w-5 h-5 text-purple-400 flex-shrink-0" fill="currentColor"
-                                    viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span>Acceso rápido con código</span>
-                            </li>
-                            <li class="flex items-center gap-3 text-slate-300">
-                                <svg class="w-5 h-5 text-purple-400 flex-shrink-0" fill="currentColor"
-                                    viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span>Crea y gestiona personajes</span>
-                            </li>
-                            <li class="flex items-center gap-3 text-slate-300">
-                                <svg class="w-5 h-5 text-purple-400 flex-shrink-0" fill="currentColor"
-                                    viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span>Lanza dados en tiempo real</span>
-                            </li>
-                            <li class="flex items-center gap-3 text-slate-300">
-                                <svg class="w-5 h-5 text-purple-400 flex-shrink-0" fill="currentColor"
-                                    viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                <span>Chat compartido con el grupo</span>
-                            </li>
-                        </ul>
-
-                        <div id="join-container">
-                            <button id="join-toggle-btn"
-                                class="w-full py-4 px-6 bg-slate-700 text-white border border-slate-600 rounded-xl font-semibold text-lg hover:bg-slate-600 hover:border-slate-500 transition-all duration-300 ease-out hover:scale-105 active:scale-95">
-                                Unirse con código
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Error message -->
-            <div id="error-message" class="hidden mt-6 max-w-md mx-auto">
-                <div
-                    class="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-center font-medium backdrop-blur-sm">
-                    <span id="error-text"></span>
-                </div>
             </div>
         </div>
-    </section>
 
-    <!-- Footer -->
-    <footer class="py-12 px-4 border-t border-slate-800 bg-slate-950">
-        <div class="max-w-7xl mx-auto">
-            <div class="grid md:grid-cols-4 gap-12 mb-12">
-                <div class="md:col-span-2">
-                    <h3 class="text-2xl font-bold text-white mb-4">
-                        Chronicle20
-                    </h3>
-                    <p class="text-slate-400 leading-relaxed mb-4 max-w-md">
-                        Mesa virtual moderna para Dungeons & Dragons. Diseñada para ser simple,
-                        rápida y completamente gratuita.
-                    </p>
-                    <div
-                        class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full">
-                        <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                        <span class="text-sm text-green-400 font-medium">En desarrollo activo</span>
-                    </div>
-                </div>
-
-                <div>
-                    <h4 class="text-white font-semibold mb-4">
-                        Características
-                    </h4>
-                    <ul class="space-y-2 text-sm text-slate-400">
-                        <li>• 100% online y gratuito</li>
-                        <li>• Sin instalaciones</li>
-                        <li>• Chat en tiempo real</li>
-                        <li>• Sistema de turnos</li>
-                        <li>• Gestión de campañas</li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h4 class="text-white font-semibold mb-4">
-                        Stack técnico
-                    </h4>
-                    <ul class="space-y-2 text-sm text-slate-400">
-                        <li>• Flask + SocketIO</li>
-                        <li>• React + Tailwind</li>
-                        <li>• WebSockets</li>
-                        <li>• Optimizado web</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
-                <p class="text-sm text-slate-500">
-                    © 2026 Chronicle20. Hecho para DMs y jugadores.
-                </p>
-                <p class="text-xs text-slate-600">
-                    Plataforma en desarrollo • Todas las funcionalidades gratuitas
-                </p>
+        <!-- Error message -->
+        <div id="error-message" class="hidden mt-6 max-w-md mx-auto">
+            <div
+                class="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-center font-medium backdrop-blur-sm">
+                <span id="error-text"></span>
             </div>
         </div>
-    </footer>
+    </div>
+</section>
+{% endblock %}
 
-    <script src="/static/js/index.js"></script>
-</body>
-
-</html>
+{% block extra_scripts %}
+<script src="/static/js/index.js"></script>
+{% endblock %}

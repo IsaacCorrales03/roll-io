@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark" />
+
+    <title>{% block title %}Chronicle20 - Tu mesa virtual para D&D{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Cinzel', 'serif'],
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+    <!-- Navbar -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-lg border-b border-slate-800/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center gap-2 group">
+                        <div
+                            class="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center transform group-hover:scale-110 transition-transform">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                        </div>
+                        <span class="font-display text-xl font-bold text-white">Chronicle20</span>
+                    </a>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="hidden md:flex items-center gap-6">
+                    <a href="/#info" class="text-slate-300 hover:text-white transition-colors text-sm font-medium">
+                        Cómo funciona
+                    </a>
+                    <a href="/#actions-section"
+                        class="text-slate-300 hover:text-white transition-colors text-sm font-medium">
+                        Ver campañas
+                    </a>
+                </div>
+
+                <!-- Auth Buttons -->
+                <div class="flex items-center gap-3">
+                    {% if user %}
+                    <a href="/dashboard"
+                        class="hidden sm:block px-4 py-2 text-slate-300 hover:text-white transition-colors text-sm font-medium">
+                        Dashboard
+                    </a>
+                    <a href="/logout"
+                        class="px-5 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg font-semibold text-sm shadow-lg shadow-red-500/20 hover:shadow-xl hover:shadow-red-500/30 transition-all duration-300 hover:scale-105 active:scale-95">
+                        Cerrar sesión
+                    </a>
+                    {% else %}
+                    <a href="/login"
+                        class="hidden sm:block px-4 py-2 text-slate-300 hover:text-white transition-colors text-sm font-medium">
+                        Iniciar sesión
+                    </a>
+                    <a href="/register"
+                        class="px-5 py-2 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-lg font-semibold text-sm shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 transition-all duration-300 hover:scale-105 active:scale-95">
+                        Registrarse
+                    </a>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </nav>
+
+    <!-- Spacer para compensar el navbar fixed -->
+    <div class="h-16"></div>
+
+    <!-- Content Block -->
+    {% block content %}{% endblock %}
+
+    <!-- Footer -->
+    <footer class="{% block footer_classes %}py-12 px-4 border-t border-slate-800 bg-slate-950{% endblock %}">
+        <div class="max-w-7xl mx-auto">
+            {% block footer_content %}
+            <div class="grid md:grid-cols-4 gap-12 mb-12">
+                <div class="md:col-span-2">
+                    <h3 class="text-2xl font-bold text-white mb-4">
+                        Chronicle20
+                    </h3>
+                    <p class="text-slate-400 leading-relaxed mb-4 max-w-md">
+                        Mesa virtual moderna para Dungeons & Dragons. Diseñada para ser simple,
+                        rápida y completamente gratuita.
+                    </p>
+                    <div
+                        class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full">
+                        <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                        <span class="text-sm text-green-400 font-medium">En desarrollo activo</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-semibold mb-4">
+                        Características
+                    </h4>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li>• 100% online y gratuito</li>
+                        <li>• Sin instalaciones</li>
+                        <li>• Chat en tiempo real</li>
+                        <li>• Sistema de turnos</li>
+                        <li>• Gestión de campañas</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-semibold mb-4">
+                        Stack técnico
+                    </h4>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li>• Flask + SocketIO</li>
+                        <li>• React + Tailwind</li>
+                        <li>• WebSockets</li>
+                        <li>• Optimizado web</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-sm text-slate-500">
+                    © 2026 Chronicle20. Hecho para DMs y jugadores.
+                </p>
+                <p class="text-xs text-slate-600">
+                    Plataforma en desarrollo • Todas las funcionalidades gratuitas
+                </p>
+            </div>
+            {% endblock %}
+        </div>
+    </footer>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

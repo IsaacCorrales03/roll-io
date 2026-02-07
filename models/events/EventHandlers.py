@@ -1,4 +1,7 @@
 from typing import TYPE_CHECKING
+from uuid import UUID
+
+from models.world.location import Location
 from .EventHandler import EventHandler
 from .Event import Event
 from .EventContext import EventContext
@@ -36,15 +39,12 @@ class RageDamageHandler(EventHandler):
     def handle(self, event, state):
         if event.type != "attack_hit":
             return
-        print("handle event")
         ctx = event.context
         if ctx is None or ctx.actor_id is None:
             return  # evento sin actor → no aplica rag
-        print("context exist")
         actor = state.characters.get(ctx.actor_id)
         if actor is None:
             return
-        print("actor exist")
         rage = actor.status.get("rage")
 
         if not rage:
@@ -130,8 +130,6 @@ class StunnedAttackHandler(EventHandler):
         attacker_id = event.context.actor_id
         target_id = event.context.target_id
         if not attacker_id or not target_id:
-            print(attacker_id)
-            print(target_id)
             return
         
         attacker = state.characters.get(attacker_id)
@@ -156,3 +154,99 @@ class StunnedAttackHandler(EventHandler):
 
                 # Cancelar el ataque original
                 raise RuntimeError("Ataque cancelado por aturdimiento")
+            
+class EnterLocationHandler(EventHandler):
+    def handle(self, event: Event, state: GameState):
+        if event.type != "enter_location":
+            return
+
+        ctx = event.context
+        if ctx is None or ctx.actor_id is None or ctx.location_id is None:
+            return
+
+        actor = state.characters.get(ctx.actor_id)
+        location_id = ctx.location_id
+
+        if actor is None:
+            return
+
+        if location_id not in state.world_registry.locations:
+            raise RuntimeError("Location inexistente")
+
+        actor.current_location = location_id
+
+        # Dispara efectos secundarios
+        state.dispatch(Event(
+            type="location_entered",
+            context=ctx,
+            payload={},
+            cancelable=False
+        ))
+
+class RevealVisibilityHandler(EventHandler):
+    def handle(self, event: Event, state: GameState):
+        if event.type != "location_entered":
+            return
+
+        if event.context is None or event.context.location_id is None:
+            return
+
+        loc_id = event.context.location_id
+        location = state.world_registry.get(Location, UUID(loc_id))
+
+        for rule in location.visibility.revealed_by:
+            if rule == "enter_city":
+                break
+        location.reveal()
+
+class CreateLocationHandler(EventHandler):
+    def handle(self, event: Event, state: GameState):
+        if event.type != "create_location":
+            return
+
+        data = event.payload
+        location = Location(**data)
+        state.world_registry.add(location)
+        state.dispatch(Event(
+            type="location_created",
+            context=event.context,
+            payload={"location_id": str(location.id)},
+            cancelable=False
+        ))
+
+class EntityMovedHandler(EventHandler):
+    def handle(self, event: Event, state: GameState) -> None:
+        if event.type != "entity_moved":
+            return
+
+        ctx = event.context
+        if ctx is None or ctx.actor_id is None or ctx.location_id is None:
+            return
+
+        actor = state.characters.get(ctx.actor_id)
+        if actor is None:
+            return
+
+        actor.current_location = ctx.location_id
+
+class SpatialActionValidator(EventHandler):
+    def handle(self, event: Event, state: GameState) -> None:
+        if event.type != "action_requested":
+            return
+
+        action = event.payload.get("action")
+        if action != "attack":
+            return
+
+        ctx = event.context
+        if ctx is None or ctx.actor_id is None or ctx.target_id is None:
+            raise RuntimeError("Contexto incompleto")
+        
+        actor = state.characters.get(ctx.actor_id)
+        target = state.characters.get(ctx.target_id)
+
+        if actor is None or target is None:
+            raise RuntimeError("Actor o target inexistente")
+
+        if actor.current_location != target.current_location:
+            raise RuntimeError("Objetivo fuera de alcance espacial")
