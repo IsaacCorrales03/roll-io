@@ -5,7 +5,9 @@ from math import floor
 from models.results import StatModifierResult
 from .events.Event import Event
 from .events.EventContext import EventContext
-from .events.GameState import GameState
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .events.GameState import GameState
 from .results import *
 
 # =======================
