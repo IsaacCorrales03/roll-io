@@ -38,13 +38,6 @@
                         {% endif %}
                     </p>
                 </div>
-
-                <div class="flex items-center gap-3">
-                    <button onclick="window.location.href='/api/campaigns/my-campaigns'"
-                        class="px-6 py-3 bg-slate-800/50 text-slate-200 border border-slate-700 rounded-xl font-semibold backdrop-blur-sm hover:bg-slate-800 hover:border-slate-600 transition-all duration-300 hover:scale-105 active:scale-95">
-                        Mis Campañas
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -209,7 +202,7 @@
                             Elige tu raza, clase y personaliza tus atributos.
                         </p>
 
-                        <button onclick="window.location.href='/characters/create'"
+                        <button onclick="window.location.href='/create_char'"
                             class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-semibold shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 transition-all duration-300 hover:scale-105 active:scale-95">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -222,7 +215,189 @@
             </div>
             {% endif %}
         </div>
+        <!-- Campaigns Section -->
+        <!-- Campaigns Section -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-3xl font-bold text-white">
+                    Mis Campañas
+                    <span class="text-slate-500 text-xl ml-2">({{ campaigns|length }})</span>
+                </h2>
+                <button onclick="window.location.href='/campaigns/create'"
+                    class="group px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl font-semibold shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30 transition-all duration-300 hover:scale-105 active:scale-95">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Crear Campaña
+                    </span>
+                </button>
+            </div>
 
+            {% if campaigns %}
+            <!-- Campaigns Grid -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for campaign in campaigns %}
+                <div class="group relative">
+                    <!-- Glow effect on hover -->
+                    <div
+                        class="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition-opacity">
+                    </div>
+
+                    <!-- Campaign Card -->
+                    <div
+                        class="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm hover:border-slate-600 transition-colors h-full">
+                        <!-- Header -->
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex-1">
+                                <h3 class="text-2xl font-bold text-white mb-1">
+                                    {{ campaign.name }}
+                                </h3>
+                                <div class="flex items-center gap-2 text-sm">
+                                    <span class="text-purple-400 font-semibold">Campaña</span>
+                                    <span class="text-slate-500">•</span>
+                                    <span class="text-slate-400">
+                                        {% if campaign.created_at %}
+                                        {{ campaign.created_at.strftime('%d/%m/%Y') }}
+                                        {% else %}
+                                        Nueva
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Campaign badge -->
+                            <div
+                                class="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-purple-500/20">
+                                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- World Info -->
+                        {% if campaign.world %}
+                        <div class="mb-4">
+                            <div
+                                class="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="text-sm font-semibold text-blue-300 line-clamp-1">{{ campaign.world
+                                    }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Campaign Stats -->
+                        <div class="mb-4 space-y-2">
+                            <div class="flex items-center gap-2 text-sm">
+                                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                <span class="text-slate-300">
+                                    {{ campaign.users|length }} jugador{{ 'es' if campaign.users|length != 1 else '' }}
+                                </span>
+                            </div>
+
+                            {% if campaign.scenarios %}
+                            <div class="flex items-center gap-2 text-sm">
+                                <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span class="text-slate-300 line-clamp-1">Escenarios configurados</span>
+                            </div>
+                            {% endif %}
+
+                            {% if campaign.updated_at %}
+                            <div class="flex items-center gap-2 text-sm">
+                                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="text-slate-400">
+                                    Actualizada {{ campaign.updated_at.strftime('%d/%m/%Y') }}
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="window.location.href='/campaign/{{ campaign.id }}/start'"
+                                class="flex-1 py-2.5 px-4 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-lg font-semibold text-sm hover:from-purple-700 hover:to-purple-600 transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg shadow-purple-500/20">
+                                <span class="flex items-center justify-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Jugar Campaña
+                                </span>
+                            </button>
+                            <button onclick="window.location.href='/campaigns/{{ campaign.id }}'"
+                                class="py-2.5 px-4 bg-slate-700/50 text-slate-300 border border-slate-600 rounded-lg font-semibold text-sm hover:bg-slate-700 hover:text-white transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% else %}
+            <!-- Empty State -->
+            <div class="relative">
+                <div class="absolute -inset-1 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-2xl blur">
+                </div>
+                <div
+                    class="relative bg-slate-800/50 border border-slate-700/50 rounded-2xl p-12 backdrop-blur-sm text-center">
+                    <div class="max-w-md mx-auto">
+                        <div
+                            class="w-20 h-20 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-purple-500/20">
+                            <svg class="w-10 h-10 text-purple-400" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                        </div>
+
+                        <h3 class="text-2xl font-bold text-white mb-3">
+                            Aún no tienes campañas
+                        </h3>
+                        <p class="text-slate-400 mb-6 leading-relaxed">
+                            Crea tu primera campaña para comenzar a dirigir aventuras épicas.
+                            Define el mundo, invita jugadores y empieza tu historia.
+                        </p>
+
+                        <button onclick="window.location.href='/campaigns/create'"
+                            class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl font-semibold shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30 transition-all duration-300 hover:scale-105 active:scale-95">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                            Crear mi primera campaña
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
         <!-- Quick Stats -->
         <div class="grid md:grid-cols-3 gap-6 mt-12">
             <!-- Account Created -->

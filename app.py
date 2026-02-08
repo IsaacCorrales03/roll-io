@@ -126,7 +126,6 @@ def login():
     )
     return resp
     
-from flask import request, render_template, redirect, make_response
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -172,6 +171,21 @@ def register():
     )
     return resp
 
+@app.route("/logout")
+def logout():
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        try:
+            # Opcional: revocar la sesión en el backend
+            auth_service.session_repo.revoke(UUID(session_id))
+        except Exception:
+            pass  # si falla, ignoramos
+
+    # Eliminar la cookie y redirigir a login
+    resp = make_response(redirect("/login"))
+    resp.set_cookie("session_id", "", expires=0)
+    return resp
+
 @app.route("/dashboard")
 def dashboard():
     session_id = request.cookies.get("session_id")
@@ -190,90 +204,107 @@ def dashboard():
 
     # Obtener personajes del usuario
     characters = character_repo.get_by_owner(str(user.id))  # lista de dicts
+    campaigns = campaign_repo.get_by_owner(str(user.id))  # lista de dicts
 
-
-    return render_template("dashboard.html", user=user, characters=characters)
-
-
-@app.route("/logout")
-def logout():
-    session_id = request.cookies.get("session_id")
-    if session_id:
-        try:
-            # Opcional: revocar la sesión en el backend
-            auth_service.session_repo.revoke(UUID(session_id))
-        except Exception:
-            pass  # si falla, ignoramos
-
-    # Eliminar la cookie y redirigir a login
-    resp = make_response(redirect("/login"))
-    resp.set_cookie("session_id", "", expires=0)
-    return resp
-
-@app.route('/<path:path>')
-def catch_all(path):
-    """Catch-all para React Router y archivos estáticos"""
-    # Si el archivo existe en static, sírvelo
-    if os.path.exists(os.path.join('static', path)):
-        return send_from_directory('static', path)
-    # Si no, sirve index.html (para rutas de React Router)
-    return send_from_directory('static', 'index.html')
-
-# ========================================
-# API REST (nuevas rutas para React)
-# ========================================
-
-@app.route('/api/campaigns', methods=['POST'])
-def create_campaign_rest():
-    """Endpoint REST para crear campaña (usado por React Index)"""
-    code = generate_campaign_code()
-    campaigns[code] = {
-        "name": "Nueva Campaña",
-        "players": {}
-    }
-    
-    return jsonify({
-        'campaign_id': code,
-        'role': 'dm'
-    })
-
-@app.route('/api/campaigns/join', methods=['POST'])
-def join_campaign_rest():
-    """Endpoint REST para validar código de campaña"""
-    data = request.get_json()
-    code = data.get('code', '').upper()
-    
-    if code not in campaigns:
-        return jsonify({'error': 'Campaña no encontrada'}), 404
-    
-    return jsonify({
-        'campaign_id': code,
-        'role': 'player'
-    })
-
-@app.route("/api/connected_clients")
-def get_connected_clients():
-    return {
-        "count": len(connected_clients),
-        "clients": list(connected_clients.keys())
-    }
-
-# ========================================
-# RUTAS HTML LEGACY (puedes mantenerlas o eliminarlas)
-# ========================================
-
-@app.route("/card")
-def card():
-    return render_template("card.html")
+    return render_template("dashboard.html", user=user, characters=characters, campaigns=campaigns)
 
 @app.route("/create_char")
 def create_char():
     return render_template("create_char.html")
 
-@app.route("/lobby-old")  # Renombrado para no conflictuar
-def lobby_old():
-    """Lobby antiguo (Jinja). Puedes eliminarlo cuando migres a React"""
-    return render_template("lobby.html")
+@app.route("/create_campaign")
+def create_campaign():
+    return render_template("create_campaign.html")
+
+@app.route("/lobby/<code>", methods=["GET"])
+def lobby(code):
+    campaign_id = request.args.get("campaign_id")
+    if not campaign_id:
+        return "Campaign ID is required", 400
+
+    print(f"Entrando a lobby con code={code} y campaign_id={campaign_id}")
+    return render_template("lobby.html", code=code, campaign_id=campaign_id)
+
+
+# Nueva ruta para iniciar campaña
+@app.route("/campaign/<campaign_id>/start")
+def start_campaign(campaign_id):
+    # Buscar sesión
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        return redirect("/login")
+
+    session = auth_service.session_repo.get(UUID(session_id))
+    if not session or session.revoked:
+        return redirect("/login")
+
+    user = auth_service.user_repo.get_by_id(session.user_id)
+    if not user:
+        return redirect("/login")
+
+    # 🔒 Obtener o reutilizar lobby
+    lobby_code = get_or_create_lobby(campaign_id)
+
+    return render_template(
+        "lobby.html",
+        code=lobby_code,
+        dm=True,
+        campaign_id=campaign_id,
+        characters=None
+    )
+
+def get_or_create_lobby(campaign_id: str) -> str:
+    for code, lobby in campaigns.items():
+        if lobby["campaign_id"] == campaign_id:
+            return code
+
+    # No existe → crear
+    code = generate_campaign_code()
+    campaigns[code] = {
+        "campaign_id": campaign_id,
+        "players": {}
+    }
+    return code
+
+@app.route("/join/<code>")
+def join_lobby(code):
+    # Validar lobby
+    print(campaigns)
+    if code not in campaigns:
+        return "Lobby not found", 404
+
+    # Buscar sesión
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        return redirect("/login")
+
+    session = auth_service.session_repo.get(UUID(session_id))
+    if not session or session.revoked:
+        return redirect("/login")
+
+    # Obtener usuario
+    user = auth_service.user_repo.get_by_id(session.user_id)
+    if not user:
+        return redirect("/login")
+
+    # Obtener campaña
+    campaign_id = campaigns[code]["campaign_id"]
+
+    # Obtener personajes del usuario
+    characters = character_repo.get_by_owner(str(user.id))  # lista de dicts
+
+    # NOTA:
+    # El sid todavía no existe aquí (HTTP != WS),
+    # se añadirá definitivamente en el evento `join_campaign`
+    # Pero dejamos claro que este usuario pertenece al lobby.
+
+    return render_template(
+        "lobby.html",
+        code=code,
+        dm=False,
+        campaign_id=campaign_id,
+        characters=characters
+    )
 
 # ========================================
 # WEBSOCKET HANDLERS
@@ -293,6 +324,53 @@ def handle_connect():
         "sid": sid
     })
 
+@socketio.on("join_campaign")
+def handle_join_campaign(data):
+    code = data.get("code")
+    if code not in campaigns:
+        return
+
+    sid = request.sid  # type: ignore
+
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        return
+
+    session = auth_service.session_repo.get(UUID(session_id))
+    if not session or session.revoked:
+        return
+
+    user = auth_service.user_repo.get_by_id(session.user_id)
+    if not user:
+        return
+
+    join_room(code)
+
+    user_id = str(user.id)
+    campaign_id = campaigns[code]["campaign_id"]
+
+    # determinar DM
+    campaign = campaign_repo.get_by_id(campaign_id)
+    is_dm = campaign and str(campaign.owner_id) == user_id
+
+    players = campaigns[code]["players"]
+
+    players[user_id] = {
+        "user_id": user_id,
+        "username": user.username,
+        "character_uuid": players.get(user_id, {}).get("character_uuid"),
+        "character_name": players.get(user_id, {}).get("character_name"),
+        "sid": sid,
+        "is_dm": is_dm
+    }
+
+    emit(
+        "player_joined",
+        {"players": list(players.values())},
+        to=code
+    )
+
+
 @socketio.on("disconnect")
 def handle_disconnect():
     sid = request.sid  # type: ignore
@@ -300,85 +378,32 @@ def handle_disconnect():
     if sid in connected_clients:
         del connected_clients[sid]
 
-@socketio.on("create_campaign")
-def handle_create_campaign(data):
-    dm_username = data.get("username", "Dungeon Master")
-    campaign_name = data.get("name", "Campaña sin nombre")
-    sid = request.sid  # type: ignore
-
-    code = generate_campaign_code()
-    campaigns[code] = {
-        "name": campaign_name,
-        "players": {}
-    }
-
-    connected_clients[sid]['username'] = dm_username
-
-    emit("campaign_created", {
-        "code": code,
-        "name": campaign_name
-    })
-
-@socketio.on("join_campaign")
-def handle_join_campaign(data):
+@socketio.on("select_character")
+def handle_select_character(data):
     code = data.get("code")
-    username = data.get("username")
     character_uuid = data.get("character_uuid")
     sid = request.sid  # type: ignore
 
     if code not in campaigns:
-        emit("error", {"message": "Campaña no encontrada"})
         return
 
-    join_room(code)
-    
-    campaigns[code]["players"][sid] = {
-        "username": username,
-        "character_uuid": character_uuid
-    }
-    connected_clients[sid]['username'] = username
+    for player in campaigns[code]["players"].values():
+        if player["sid"] == sid:
+            character = character_repo.get_by_id(character_uuid)
+            if not character:
+                return
 
-    all_participants = [
-        {
-            "username": p["username"],
-            "character_uuid": p.get("character_uuid"),
-            "is_dm": p["username"] == "Dungeon Master"
-        } for p in campaigns[code]["players"].values()
-    ]
+            player["character_uuid"] = character_uuid
+            player["character_name"] = character["name"]
+            break
 
-    emit("player_joined", {
-        "players": all_participants,
-        "new_player": username
-    }, to=code)
+    emit(
+        "player_joined",
+        {"players": list(campaigns[code]["players"].values())},
+        to=code
+    )
 
-@socketio.on("leave_campaign")
-def handle_leave_campaign(data):
-    code = data.get("code")
-    sid = request.sid  # type: ignore
 
-    if code in campaigns and sid in campaigns[code]["players"]:
-        username = campaigns[code]["players"][sid]["username"]
-        del campaigns[code]["players"][sid]
-        leave_room(code)
-
-        all_participants = [{
-            "username": campaigns[code]["dm_username"],
-            "character_uuid": None,
-            "is_dm": True
-        }]
-        
-        all_participants.extend([
-            {
-                "username": p["username"],
-                "character_uuid": p.get("character_uuid"),
-                "is_dm": False
-            } for p in campaigns[code]["players"].values()
-        ])
-
-        emit("player_left", {
-            "username": username,
-            "players": all_participants
-        }, to=code)
 
 @socketio.on("chat_message")
 def handle_chat_message(data):
@@ -389,15 +414,22 @@ def handle_chat_message(data):
     if not text or code not in campaigns:
         return
 
-    if sid in campaigns[code]["players"]:
-        sender = campaigns[code]["players"][sid]["username"]
-    else:
-        sender = "Desconocido"
+    sender = "Desconocido"
 
-    emit("chat_message", {
-        "sender": sender,
-        "text": text
-    }, to=code)
+    for player in campaigns[code]["players"].values():
+        if player["sid"] == sid:
+            sender = player["username"]
+            break
+
+    emit(
+        "chat_message",
+        {
+            "sender": sender,
+            "text": text
+        },
+        to=code
+    )
+
 
 
 if __name__ == "__main__":

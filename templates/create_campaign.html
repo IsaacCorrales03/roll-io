@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Crear campaña</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        form {
+            background: #020617;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 320px;
+        }
+        h1 {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+        input, button {
+            width: 100%;
+            padding: 0.6rem;
+            margin-top: 0.75rem;
+            border-radius: 6px;
+            border: none;
+        }
+        input {
+            background: #1e293b;
+            color: #e5e7eb;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .error {
+            color: #f87171;
+            margin-top: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+
+<form id="campaign-form">
+    <h1>Crear campaña</h1>
+    <input
+        type="text"
+        id="name"
+        placeholder="Nombre de la campaña"
+        required
+    >
+    <button type="submit">Crear</button>
+    <div id="error" class="error"></div>
+</form>
+
+<script>
+document.getElementById("campaign-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById("name").value;
+    const errorEl = document.getElementById("error");
+    errorEl.textContent = "";
+
+    const res = await fetch("/api/campaigns/create", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({ name })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+        errorEl.textContent = data.error || "Error desconocido";
+        return;
+    }
+
+    alert(`Campaña creada: ${data.name}`);
+});
+</script>
+
+</body>
+</html>
