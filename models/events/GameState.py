@@ -10,12 +10,12 @@ from .Event import Event
 from .EventHandler import EventHandler
 from ..world.world import World
 from ..world.registry import WorldRegistry
+from ..querys import QueryHandler, Query
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .EventDispatcher import EventDispatcher
     from ..character import Character
-    from ..querys import QueryHandler, Query
 
 @dataclass
 class GameState:
