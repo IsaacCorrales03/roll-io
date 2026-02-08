@@ -1,247 +1,264 @@
-# Proyecto D&D Web — Estado, evaluación y hoja de ruta
+# Roll-IO
 
-## 1. Visión resumida
+![License](https://img.shields.io/badge/license-Unlicense-blue.svg)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue)
+![Status](https://img.shields.io/badge/status-active--development-orange)
+![Architecture](https://img.shields.io/badge/architecture-hexagonal-critical)
 
-El proyecto apunta correctamente a construir un **motor D&D 5e centrado en reglas**, no un VTT genérico. Las decisiones clave (modelos de dominio, features como código, eventos, TurnManager) están bien orientadas y son coherentes con el objetivo de competir directamente con Roll20 en D&D.
+Roll-IO es una **Virtual Tabletop (VTT)** gratuita y open source, inspirada conceptualmente en plataformas como Roll20, diseñada **exclusivamente para Dungeons & Dragons 5th Edition (D&D 5e)**. El proyecto prioriza el rigor arquitectónico, la separación estricta de responsabilidades y la extensibilidad del dominio de reglas.
 
-No obstante, el sistema está **a medio camino** entre un modelo de datos enriquecido y un **motor de simulación completo**. El siguiente salto es estructural, no cosmético.
-
----
-
-## 2. Qué está realizado (estado actual real)
-
-### 2.1 Arquitectura general
-
-* Backend en **Flask** con separación clara:
-
-  * `models/`: dominio D&D
-  * `services/`: persistencia y lógica de aplicación
-  * `routes/`: API REST
-* Dominio modelado explícitamente (buena señal):
-
-  * `Actor`, `Character`, `Enemy`
-  * `Race`, `DnDClass`, `ClassFeature`
-  * `Weapon`
-
-### 2.2 Núcleo de reglas (parcial pero prometedor)
-
-* **Actor** como entidad central (correcto).
-* Sistema de **acciones abstractas** (`Action`) con:
-
-  * `requirements()`
-  * `resolve()`
-* Primer intento serio de **sistema de eventos** (`Event`, `EventListener`).
-* `TurnManager` con:
-
-  * Iniciativa
-  * Orden de turnos
-  * Rondas
-
-Esto confirma que el proyecto **no está orientado a macros**, sino a reglas codificadas.
-
-### 2.3 Features de clase
-
-* `ClassFeature` existe como concepto.
-* Ejemplo real: `UnarmoredDefense`.
-* Features pueden:
-
-  * Aplicarse al actor
-  * Modificar AC mediante fórmulas
-
-### 2.4 Persistencia
-
-* Repositorios y mappers para `Character`.
-* Base de datos integrada.
-
-### 2.5 Frontend / API
-
-* Endpoints funcionales para:
-
-  * Razas
-  * Clases
-  * Personajes
-* Inicio de integración frontend-backend.
+El sistema no es un clon visual de Roll20. Su objetivo es proporcionar una **plataforma técnica sólida** para ejecutar, simular y gestionar campañas de D&D 5e mediante un motor de reglas propio, desacoplado de la interfaz y de la infraestructura.
 
 ---
 
-## 3. Evaluación crítica del estado
+## Objetivos del proyecto
 
-### 3.1 Condición general
-
-**Estado:** funcional pero incompleto.
-
-El proyecto:
-
-* ✔ Tiene buen diseño conceptual
-* ✔ Tiene código de dominio real
-* ✘ No tiene todavía un motor determinista cerrado
-* ✘ Mezcla responsabilidades (algunas reglas aún son pasivas)
-
-No está roto. **Está inmaduro**.
-
-### 3.2 Problemas estructurales detectados
-
-#### A. Sistema de eventos incompleto
-
-* Existe, pero:
-
-  * No es el eje del sistema
-  * No todas las acciones emiten eventos
-  * Las features no reaccionan de forma consistente
-
-#### B. Personaje aún pasivo
-
-* `Character` contiene datos y algunas reglas
-* Pero no:
-
-  * Valida acciones de forma global
-  * Decide qué puede o no hacer en cada estado
-
-#### C. Combate no es transaccional
-
-* El ataque no es una operación atómica
-* Falta:
-
-  * Pipeline claro de resolución
-  * Hooks de pre / post daño
-
-#### D. TurnManager aislado
-
-* Gestiona turnos, pero no gobierna el combate como sistema
+* Implementar una VTT centrada exclusivamente en D&D 5e.
+* Modelar reglas del sistema como **dominio puro**, testeable y extensible.
+* Separar completamente dominio, aplicación, infraestructura y presentación.
+* Permitir evolución hacia combates avanzados, estados complejos y automatización.
+* Mantener el proyecto libre de dependencias propietarias.
 
 ---
 
-## 4. Qué debemos realizar (sin expandir alcance)
+## Características
 
-### Objetivo inmediato
-
-Convertir lo existente en un **motor D&D ejecutable**, no añadir features nuevas.
-
-No UI nueva. No mapas. No marketplace.
-
----
-
-## 5. Siguiente etapa: definición estricta
-
-### Nombre de la etapa
-
-**Cierre del núcleo de reglas (Core Lock-in)**
-
-### Propósito
-
-Garantizar que:
-
-* Toda acción pasa por el motor
-* Toda regla es código
-* Todo efecto es reproducible
+* Gestión de campañas, personajes y sesiones.
+* Motor de combate y acciones basado en eventos.
+* Soporte explícito para ventajas, desventajas y modificadores (D&D 5e).
+* Sistema de estados (stun, rage, buffs, debuffs).
+* Arquitectura Hexagonal / Clean Architecture.
+* Persistencia desacoplada (implementación actual: MySQL).
+* Autenticación y sesiones.
+* Interfaz web basada en Flask y Jinja2.
 
 ---
 
-## 6. Lista de pasos necesarios (orden no negociable)
+## Estructura del proyecto
 
-### Paso 1 — Formalizar el motor de eventos
-
-* Diseñar y cerrar el **contrato del sistema de eventos** (`EVENT_SYSTEM.md`).
-* Implementar `Event`, `EventBus` y tests básicos (orden, mutabilidad, cancelación).
-* Ninguna feature se implementa antes de que este sistema esté estable y testeado.
-
----
-
-### Paso 2 — Diseñar el sistema de acciones
-
-* Diseñar y documentar el **contrato del sistema de acciones** (`ACTION_SYSTEM.md`).
-* Separar explícitamente:
-
-  * `Command` (intención del jugador)
-  * `Action` (resolución del motor)
-  * `Event` (hechos del sistema)
-* Definir costes, validación, ejecución transaccional y relación con eventos.
-* Implementar una acción canónica (`AttackAction`) con tests.
+```text
+roll-io/
+├── app.py
+├── main.py
+├── config.py
+├── requirements.txt
+├── auth/
+├── campaigns/
+├── models/
+├── routes/
+├── services/
+├── static/
+├── templates/
+├── test/
+└── utils/
+```
 
 ---
 
-### Paso 2 — Convertir features en sistemas reactivos
+## Descripción detallada por módulos
 
-* Cada `ClassFeature` debe:
+## Raíz
 
-  * Escuchar eventos
-  * Modificar comportamiento dinámicamente
+### `app.py`
 
-Ejemplo:
+Inicializa la aplicación Flask, registra blueprints y configura middlewares básicos.
 
-* Rage escucha `OnDamageTaken`
-* Unarmored Defense escucha `OnArmorCheck`
+### `main.py`
 
----
+Punto de entrada del sistema. Controla el ciclo de vida de la aplicación.
 
-### Paso 3 — Acciones como transacciones
+### `config.py`
 
-* Un ataque debe:
+Gestión centralizada de configuración (entorno, base de datos, secretos).
 
-  1. Validarse
-  2. Ejecutarse
-  3. Emitir eventos
-  4. Aplicar efectos
-  5. Confirmarse
+### `requirements.txt`
 
-Si algo falla, no se aplica nada.
+Dependencias del proyecto, priorizando librerías estables y ampliamente adoptadas.
 
 ---
 
-### Paso 4 — CombatManager real
+## `auth/` — Autenticación
 
-* Encapsular:
+Implementa autenticación siguiendo estrictamente **Ports & Adapters**.
 
-  * TurnManager
-  * Estado del combate
-  * Participantes
-* El combate no depende del frontend.
+```
+auth/
+├── domain/
+├── ports/
+└── infrastructure/
+```
+
+### `auth/domain/`
+
+* `user.py`: entidad de usuario (identidad, credenciales, invariantes).
+* `auth_session.py`: modelo de sesión autenticada.
+
+Dominio completamente independiente de Flask y SQL.
+
+### `auth/ports/`
+
+Contratos abstractos:
+
+* Persistencia de usuarios.
+* Persistencia de sesiones.
+* Hasheo de contraseñas.
+* Validación de sesiones.
+
+### `auth/infrastructure/`
+
+Implementaciones técnicas:
+
+* Repositorios MySQL.
+* Hasher bcrypt.
 
 ---
 
-### Paso 5 — Personaje como agente
+## `campaigns/` — Campañas
 
-* El `Actor` debe poder responder:
+Encapsula la gestión de campañas de juego.
 
-  * “¿Qué puedo hacer ahora?”
-  * “¿Esta acción es legal?”
+```
+campaigns/
+├── domain/
+├── ports/
+└── infrastructure/
+```
 
-Eliminar decisiones en UI.
+### `campaigns/domain/`
+
+* `campaign.py`: entidad de campaña, invariantes y reglas internas.
+
+### `campaigns/ports/`
+
+* `campaign_repository.py`: contrato de persistencia.
+
+### `campaigns/infrastructure/`
+
+* `mysql_campaign_repository.py`: implementación concreta.
 
 ---
 
-### Paso 6 — Tests de reglas
+## `models/` — Dominio de D&D 5e
 
-* Tests obligatorios para:
+Este es el **núcleo conceptual del proyecto**. Aquí reside toda la lógica de D&D 5e.
 
-  * Iniciativa
-  * Ataque básico
-  * Feature activa
-  * Evento encadenado
+### Personajes y reglas
 
-Sin tests → no avanzar.
+* Clases (`Barbarian`, etc.) con habilidades modeladas como lógica de dominio.
+* Razas y modificadores.
+* Sistema de atributos y tiradas.
+
+### Acciones
+
+* Ataques.
+* Tiradas de dados.
+* Comandos de acción inmutables.
+
+### Eventos
+
+Arquitectura basada en eventos:
+
+* `Event`
+* `EventHandler`
+* `EventDispatcher`
+
+Permite composición de reglas sin condicionales rígidos.
+
+### Estados
+
+* Rage
+* Stun
+* Buffs y debuffs
+
+Cada estado es una entidad explícita del dominio.
+
+### Mundo
+
+* Entidades del mundo.
+* Contexto de combate.
+* Representación de relaciones entre actores.
+
+El dominio no conoce HTTP, SQL ni sesiones.
 
 ---
 
-## 7. Veredicto final
+## `services/` — Capa de aplicación
 
-### Evaluación honesta
+Orquesta casos de uso:
 
-* **Diseño:** sólido
-* **Dirección:** correcta
-* **Estado:** intermedio
-* **Riesgo actual:** dispersión prematura
+* Creación de personajes.
+* Inicio de campañas.
+* Ejecución de acciones.
 
-### Siguiente paso concreto recomendado
+No contiene lógica de reglas, solo coordinación.
 
-No añadir nada nuevo.
+---
 
-👉 **Elegir UNA feature de clase (Rage o Sneak Attack)** y:
+## `routes/` — Presentación HTTP
 
-* Implementarla 100% vía eventos
-* Usarla como patrón obligatorio
+Endpoints Flask:
 
-Ese paso transforma el proyecto de “prometedor” a “irreversible”.
+* Autenticación.
+* Campañas.
+* Personajes.
+* Datos de reglas.
 
-A partir de ahí, el camino ya no se parece a Roll20.
-Se parece a un motor D&D real.
+Adaptadores entre HTTP y servicios.
+
+---
+
+## `static/` y `templates/`
+
+Capa de interfaz web:
+
+* HTML (Jinja2).
+* CSS.
+* JavaScript.
+
+Separada completamente del dominio.
+
+---
+
+## Arquitectura
+
+Arquitectura **Hexagonal (Ports & Adapters)**:
+
+* Dominio puro y central.
+* Puertos como contratos.
+* Infraestructura reemplazable.
+* Presentación como adaptador externo.
+
+Esta decisión es deliberada y no negociable.
+
+---
+
+## Instalación
+
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+---
+
+## Ejecución
+
+```bash
+python main.py
+```
+
+---
+
+## Licencia
+
+Este proyecto se publica bajo **The Unlicense**.
+
+El software es de dominio público:
+
+* Uso libre.
+* Modificación libre.
+* Distribución libre.
+* Uso comercial permitido.
+
+Sin garantías de ningún tipo.
