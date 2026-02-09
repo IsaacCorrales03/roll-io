@@ -1,7 +1,7 @@
+from __future__ import annotations
+
 from uuid import UUID
-from datetime import datetime
 from services.db_service import DatabaseService
-from campaigns.domain.campaign import Campaign
 from campaigns.ports.campaign_repository import CampaignRepository
 
 
@@ -14,25 +14,24 @@ class MySQLCampaignRepository(CampaignRepository):
     # Campaigns
     # -----------------------------
 
-    def create(self, campaign: Campaign) -> None:
+    def create(self, campaign_data: dict) -> None:
         cur = self.db.cursor()
         cur.execute(
             """
             INSERT INTO campaigns (
-                id, name, owner_id, world, scenarios
-            ) VALUES (%s, %s, %s, %s, %s)
+                id, name, owner_id, world_id
+            ) VALUES (%s, %s, %s, %s)
             """,
             (
-                str(campaign.id),
-                campaign.name,
-                str(campaign.owner_id),
-                campaign.world,
-                campaign.scenarios,
+                campaign_data["id"],
+                campaign_data["name"],
+                campaign_data["owner_id"],
+                campaign_data.get("world_id"),
             )
         )
         self.db.commit()
 
-    def get_by_id(self, campaign_id: UUID | str) -> Campaign | None:
+    def get_by_id(self, campaign_id: UUID | str) -> dict | None:
         if isinstance(campaign_id, UUID):
             campaign_id = str(campaign_id)
 
@@ -41,12 +40,9 @@ class MySQLCampaignRepository(CampaignRepository):
             "SELECT * FROM campaigns WHERE id = %s LIMIT 1",
             (campaign_id,)
         )
-        row = cur.fetchone()
-        if not row:
-            return None
-        return self._row_to_campaign(row)  # type: ignore
+        return cur.fetchone()
 
-    def get_by_owner(self, owner_id: UUID | str) -> list[Campaign]:
+    def get_by_owner(self, owner_id: UUID | str) -> list[dict]:
         if isinstance(owner_id, UUID):
             owner_id = str(owner_id)
 
@@ -55,7 +51,7 @@ class MySQLCampaignRepository(CampaignRepository):
             "SELECT * FROM campaigns WHERE owner_id = %s",
             (owner_id,)
         )
-        return [self._row_to_campaign(r) for r in cur.fetchall()]  # type: ignore
+        return cur.fetchall()
 
     # -----------------------------
     # Members
@@ -86,8 +82,9 @@ class MySQLCampaignRepository(CampaignRepository):
             "SELECT user_id FROM campaign_members WHERE campaign_id = %s",
             (campaign_id,)
         )
-        return [row["user_id"] for row in cur.fetchall()]  # type: ignore
-    def get_campaigns_by_user(self, user_id: UUID | str) -> list[Campaign]:
+        return [row["user_id"] for row in cur.fetchall()]
+
+    def get_campaigns_by_user(self, user_id: UUID | str) -> list[dict]:
         if isinstance(user_id, UUID):
             user_id = str(user_id)
 
@@ -100,7 +97,8 @@ class MySQLCampaignRepository(CampaignRepository):
             """,
             (user_id,)
         )
-        return [self._row_to_campaign(r) for r in cur.fetchall()]  # type: ignore
+        return cur.fetchall()
+
     def is_member(self, campaign_id: UUID | str, user_id: UUID | str) -> bool:
         if isinstance(campaign_id, UUID):
             campaign_id = str(campaign_id)
@@ -117,20 +115,3 @@ class MySQLCampaignRepository(CampaignRepository):
             (campaign_id, user_id)
         )
         return cur.fetchone() is not None
-
-    
-    # -----------------------------
-    # Mapper
-    # -----------------------------
-
-    def _row_to_campaign(self, row: dict) -> Campaign:
-        return Campaign(
-            id=UUID(row["id"]),
-            name=row["name"],
-            owner_id=UUID(row["owner_id"]),
-            world=row["world"],
-            scenarios=row["scenarios"],
-            created_at=row.get("created_at"),
-            updated_at=row.get("updated_at"),
-        )
-    

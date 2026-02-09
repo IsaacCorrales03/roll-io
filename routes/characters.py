@@ -1,46 +1,48 @@
-from uuid import UUID   
-from flask import Blueprint, request, jsonify, render_template, g
-from auth.infrastructure.auth_session_repository import MySQLAuthSessionRepository
-from auth.infrastructure.bcrypt_hasher import BcryptPasswordHasher
-from auth.infrastructure.user_repository import MySQLUserRepository
-from services.character_service import CharacterService
-from services.character_repository import CharacterRepository
-from services.auth_service import AuthService
-from auth.ports.auth_session_repository import AuthSessionRepository
-from auth.domain.auth_session import AuthSession
-from services.db_service import DatabaseService
-from services.service_validator import DBSessionValidator
+from uuid import UUID
+from flask import Blueprint, request, jsonify, g
 
-character_bp = Blueprint("character", __name__) 
+character_bp = Blueprint("character", __name__)
 
-repo = CharacterRepository()
-service = CharacterService(repo)
-db = DatabaseService()
+# =====================================
+# Helpers (sin lógica pesada)
+# =====================================
 
-user_repo = MySQLUserRepository(db)
-session_repo = MySQLAuthSessionRepository(db)
+def get_character_service():
+    return g.character_service
 
-session_validator = DBSessionValidator(session_repo)
-password_hasher = BcryptPasswordHasher()
-auth_service = AuthService(user_repo, session_repo, password_hasher)
+
+def get_auth_service():
+    return g.auth_service
+
 
 def get_current_user_id() -> str | None:
-    """Obtiene el owner_id a partir de la cookie session_id"""
+    """
+    Obtiene el user_id a partir de la cookie session_id.
+    No crea servicios. No toca DB fuera del request.
+    """
     session_id = request.cookies.get("session_id")
     if not session_id:
         return None
+
+    auth_service = get_auth_service()
     session = auth_service.session_repo.get(UUID(session_id))
+
     if not session or session.revoked:
         return None
+
     return str(session.user_id)
 
 
-@character_bp.route("/create", methods=["POST"])
+# =====================================
+# Routes
+# =====================================
+
+@character_bp.post("/create")
 def create_character():
     owner_id = get_current_user_id()
     if not owner_id:
         return jsonify({"error": "No autenticado"}), 401
-    
+
     data = request.json or {}
     name = data.get("name")
     race_key = data.get("race")
@@ -50,44 +52,48 @@ def create_character():
         return jsonify({"error": "Datos incompletos"}), 400
 
     try:
-        character = service.create(UUID(owner_id), name, race_key, class_key)
+        character = get_character_service().create(
+            UUID(owner_id),
+            name,
+            race_key,
+            class_key
+        )
     except KeyError:
         return jsonify({"error": "Raza o clase inválida"}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
     return jsonify({
-        "id": character.id,
+        "id": str(character.id),
         "character": character.to_json()
     }), 201
 
 
-@character_bp.route("/load", methods=["GET"])
+@character_bp.get("/load")
 def load_character():
     owner_id = get_current_user_id()
     if not owner_id:
         return jsonify({"error": "No autenticado"}), 401
 
-    from_id = request.args.get("from_id")
-    if not from_id:
+    character_id = request.args.get("from_id")
+    if not character_id:
         return jsonify({"error": "ID requerido"}), 400
 
-    character = service.load(from_id)
+    character = get_character_service().load(character_id)
     if not character:
         return jsonify({"error": "Personaje no encontrado"}), 404
 
-    # Verificar que el personaje pertenece al usuario
-    if character.owner_id != owner_id:
+    if str(character.owner_id) != owner_id:
         return jsonify({"error": "Acceso denegado"}), 403
 
-    return jsonify(character), 200
+    return jsonify(character.to_json()), 200
 
 
-@character_bp.route("/my-characters", methods=["GET"])
+@character_bp.get("/my-characters")
 def my_characters():
     owner_id = get_current_user_id()
     if not owner_id:
         return jsonify({"error": "No autenticado"}), 401
 
-    characters = repo.get_by_owner(owner_id)
+    characters = get_character_service().get_by_owner(owner_id)
     return jsonify(characters), 200

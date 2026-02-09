@@ -13,33 +13,52 @@
             align-items: center;
             height: 100vh;
         }
+
         form {
             background: #020617;
             padding: 2rem;
             border-radius: 12px;
-            width: 320px;
+            width: 360px;
         }
+
         h1 {
             margin-bottom: 1rem;
             font-size: 1.25rem;
         }
-        input, button {
+
+        h2 {
+            margin-top: 1.5rem;
+            font-size: 1rem;
+            color: #c7d2fe;
+        }
+
+        input, textarea, button {
             width: 100%;
             padding: 0.6rem;
             margin-top: 0.75rem;
             border-radius: 6px;
             border: none;
+            font-family: inherit;
         }
-        input {
+
+        input, textarea {
             background: #1e293b;
             color: #e5e7eb;
         }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
         button {
             background: #6366f1;
             color: white;
             font-weight: 600;
             cursor: pointer;
+            margin-top: 1.25rem;
         }
+
         .error {
             color: #f87171;
             margin-top: 0.75rem;
@@ -50,13 +69,48 @@
 
 <form id="campaign-form">
     <h1>Crear campaña</h1>
+
+    <!-- Campaign -->
     <input
         type="text"
-        id="name"
+        id="campaign-name"
         placeholder="Nombre de la campaña"
         required
     >
-    <button type="submit">Crear</button>
+
+    <!-- World -->
+    <h2>Mundo</h2>
+
+    <input
+        type="text"
+        id="world-name"
+        placeholder="Nombre del mundo"
+        required
+    >
+
+    <textarea
+        id="world-lore"
+        placeholder="Lore / descripción del mundo"
+    ></textarea>
+
+    <!-- Scene -->
+    <h2>Escena inicial</h2>
+
+    <input
+        type="text"
+        id="scene-name"
+        placeholder="Nombre de la escena"
+        required
+    >
+
+    <input
+        type="url"
+        id="scene-map"
+        placeholder="URL del mapa (jpg / png)"
+        required
+    >
+
+    <button type="submit">Crear campaña</button>
     <div id="error" class="error"></div>
 </form>
 
@@ -64,17 +118,28 @@
 document.getElementById("campaign-form").addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const name = document.getElementById("name").value;
+    const payload = {
+        campaign: {
+            name: document.getElementById("campaign-name").value
+        },
+        world: {
+            name: document.getElementById("world-name").value,
+            lore: document.getElementById("world-lore").value
+        },
+        scene: {
+            name: document.getElementById("scene-name").value,
+            map_url: document.getElementById("scene-map").value
+        }
+    };
+
     const errorEl = document.getElementById("error");
     errorEl.textContent = "";
 
     const res = await fetch("/api/campaigns/create", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name })
+        body: JSON.stringify(payload)
     });
 
     const data = await res.json();
@@ -84,7 +149,7 @@ document.getElementById("campaign-form").addEventListener("submit", async (e) =>
         return;
     }
 
-    alert(`Campaña creada: ${data.name}`);
+    window.location.href = `/campaign/${data.id}/start`;
 });
 </script>
 

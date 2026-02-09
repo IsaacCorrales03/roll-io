@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from uuid import UUID
-from typing import Any, List, TypeVar, Generic
+from typing import TypeVar, Generic
 from math import floor
 from models.results import StatModifierResult
 from .events.Event import Event

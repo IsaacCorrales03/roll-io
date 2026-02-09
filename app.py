@@ -1,29 +1,36 @@
+import time
+__START_TIME__ = time.perf_counter()
+from campaigns.infrastructure.mysql_campaign_repository import MySQLCampaignRepository
+from services.campaign_service import CampaignService
+from services.character_repository import CharacterRepository
+from services.character_service import CharacterService
+from world.infrastructure.inmemory_world_repository import InMemoryWorldRepository
 from uuid import UUID
-from flask import Flask, g, make_response, redirect, render_template, request, send_from_directory, jsonify
+from flask import Flask, g, make_response, redirect, render_template, request
 from flask_cors import CORS
-from flask_socketio import SocketIO, join_room, leave_room, emit
+from flask_socketio import SocketIO, join_room, emit
 
 # Repositories & Services
 from services.auth_service import AuthService
-from services.db_service import DatabaseService
+from services.db_service import  create_db_service
 from auth.infrastructure.user_repository import MySQLUserRepository
 from auth.infrastructure.auth_session_repository import MySQLAuthSessionRepository
 from services.service_validator import DBSessionValidator
-from auth.ports.password_hasher import PasswordHasher
 from auth.infrastructure.bcrypt_hasher import BcryptPasswordHasher
-
 # Blueprints
 from routes.races import races_bp
 from routes.dnd_clasess import classes_bp
-from routes.characters import character_bp, repo as character_repo
-from routes.campaign_routes import campaign_bp, campaign_repo
+from routes.characters import character_bp
+from routes.campaign_routes import campaign_bp
 # Utils
+from services.world_service import WorldService
 from utils.gen_code import generate_campaign_code
 
-import os
+
 
 connected_clients = {}
 campaigns = {}
+worlds = {}
 
 # ==========================
 # App setup
@@ -62,18 +69,22 @@ app.register_blueprint(campaign_bp, url_prefix="/api/campaigns")
 # ==========================
 # Dependency wiring
 # ==========================
-db = DatabaseService()
+db = create_db_service()
 
 user_repo = MySQLUserRepository(db)
 session_repo = MySQLAuthSessionRepository(db)
-
 session_validator = DBSessionValidator(session_repo)
 password_hasher = BcryptPasswordHasher()
 auth_service = AuthService(user_repo, session_repo, password_hasher)
+character_repo = CharacterRepository()
+character_service = CharacterService(character_repo)
+campaign_repo = MySQLCampaignRepository(db)
+campaign_service = CampaignService(campaign_repo)
 
-# ==========================
-# Auth middleware
-# ==========================
+world_repo = InMemoryWorldRepository()
+world_service = WorldService(world_repo)
+
+
 @app.before_request
 def auth_middleware():
     sid = request.cookies.get("session_id")
@@ -86,6 +97,14 @@ def auth_middleware():
     except Exception:
         # invalid UUID or session
         g.user_id = None
+
+@app.before_request
+def inject_services():
+    g.auth_service = auth_service
+    g.character_service = character_service
+    g.auth_service = auth_service
+    g.campaign_service = campaign_service
+    g.world_service = world_service
 
 @app.context_processor
 def inject_user():
@@ -213,8 +232,9 @@ def create_char():
     return render_template("create_char.html")
 
 @app.route("/create_campaign")
-def create_campaign():
+def create_campaign_view():
     return render_template("create_campaign.html")
+
 
 @app.route("/lobby/<code>", methods=["GET"])
 def lobby(code):
@@ -224,6 +244,20 @@ def lobby(code):
 
     print(f"Entrando a lobby con code={code} y campaign_id={campaign_id}")
     return render_template("lobby.html", code=code, campaign_id=campaign_id)
+
+@app.route("/world/<campaign_id>")
+def world_view(campaign_id):
+    if campaign_id not in worlds:
+        return "World not initialized", 404
+
+    world = worlds[campaign_id]
+    scene = next(iter(world.scenes.values()))
+
+    return render_template(
+        "world.html",
+        world=world,
+        scene=scene
+    )
 
 
 # Nueva ruta para iniciar campaña
@@ -351,7 +385,7 @@ def handle_join_campaign(data):
 
     # determinar DM
     campaign = campaign_repo.get_by_id(campaign_id)
-    is_dm = campaign and str(campaign.owner_id) == user_id
+    is_dm = campaign and str(campaign["owner_id"]) == user_id
 
     players = campaigns[code]["players"]
 
@@ -370,6 +404,33 @@ def handle_join_campaign(data):
         to=code
     )
 
+@socketio.on("start_campaign")
+def start_game(data):
+    print("Intentando iniciar campaña con data:", data)
+    code = data["code"]
+    campaign = campaigns.get(code)
+
+    if not campaign:
+        return
+
+    players = campaigns[code]["players"].values()  # lista de players conectados
+    print(players)
+    not_ready = [
+        p for p in players
+        if not p["is_dm"] and not p["character_uuid"]
+    ]
+
+    if not_ready:
+        print("No todos los jugadores están listos:", not_ready )
+        emit("campaign_start_error", {
+            "reason": "No todos los jugadores están listos"
+        }, to=request.sid) #type: ignore
+        return
+
+    # Todos listos → iniciar
+    emit("campaign_started", {
+        "code": code
+    }, to=code)
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -432,11 +493,13 @@ def handle_chat_message(data):
 
 
 
-if __name__ == "__main__":
-    socketio.run(
-        app=app, 
-        host='0.0.0.0',
-        debug=True,
-        port=5000,
-        allow_unsafe_werkzeug=True
-    )
+
+startup_time = time.perf_counter() - __START_TIME__
+print(f"[BOOT] Startup time: {startup_time:.3f}s")
+socketio.run(
+    app=app, 
+    host='0.0.0.0',
+    port=5000,
+    debug=True,
+    allow_unsafe_werkzeug=True
+)

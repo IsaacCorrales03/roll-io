@@ -1,40 +1,39 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from uuid import UUID
-from datetime import datetime
-from typing import List
+import datetime as _dt
+
 
 @dataclass
 class Campaign:
     id: UUID
     name: str
     owner_id: UUID
-    users: List[UUID] = field(default_factory=list)
-    world: str = ""
-    scenarios: str = ""
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    users: list[UUID] = field(default_factory=list)
+    world_id: UUID | None = None
+    created_at: _dt.datetime | None = None
+    updated_at: _dt.datetime | None = None
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Campaign":
+    def from_dict(cls, data: dict) -> Campaign:
         return cls(
-            id=UUID(data.get("id")) if data.get("id") else UUID(int=0),
-            name=data.get("name", ""),
-            owner_id=UUID(data.get("owner_id")) if data.get("owner_id") else UUID(int=0),
-            users=[UUID(u) if isinstance(u, str) else u for u in data.get("users", [])],
-            world=data.get("world", ""),
-            scenarios=data.get("scenarios", ""),
+            id=UUID(data["id"]),
+            name=data["name"],
+            owner_id=UUID(data["owner_id"]),
+            users=[UUID(u) for u in data.get("users", [])],
+            world_id=UUID(data["world_id"]) if data.get("world_id") else None,
             created_at=data.get("created_at"),
             updated_at=data.get("updated_at"),
         )
-    @classmethod
-    def to_dict(cls, campaign: "Campaign") -> dict:
+
+    def to_dict(self) -> dict:
         return {
-            "id": str(campaign.id),
-            "name": campaign.name,
-            "owner_id": str(campaign.owner_id),
-            "users": [str(u) for u in campaign.users],
-            "world": campaign.world,
-            "scenarios": campaign.scenarios,
-            "created_at": campaign.created_at.isoformat() if campaign.created_at else None,
-            "updated_at": campaign.updated_at.isoformat() if campaign.updated_at else None,
+            "id": str(self.id),
+            "name": self.name,
+            "owner_id": str(self.owner_id),
+            "users": [str(u) for u in self.users],
+            "world_id": str(self.world_id) if self.world_id else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

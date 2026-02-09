@@ -1,11 +1,11 @@
 import uuid
 from typing import Optional, Dict, Any, cast
-from services.db_service import DatabaseService
+from services.db_service import create_db_service
 
 
 class CharacterRepository:
     def __init__(self):
-        self.db = DatabaseService()
+        self.db = create_db_service()
         self._create_table()
 
     def _create_table(self):
