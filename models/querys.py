@@ -22,7 +22,7 @@ Q = TypeVar("Q", bound="Query")
 R = TypeVar("R", bound="QueryResult")
 
 class QueryHandler(Generic[Q, R]):
-    def handle(self, query: Q, state: GameState) -> R:
+    def handle(self, query: Q, state: "GameState") -> R:
         raise NotImplementedError
 
 
