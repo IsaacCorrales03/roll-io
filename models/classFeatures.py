@@ -9,6 +9,7 @@ from .events.EventContext import EventContext
 from uuid import UUID
 
 class UnarmoredDefense(ClassFeature):
+    type = "Pasiva"
     name = "Unarmored Defense"
     description = "Mientras no lleves armadura, tu CA es igual a 10 + tu modificador de Destreza + tu modificador de Constitución."
     level = 1
@@ -46,6 +47,7 @@ class UnarmoredDefense(ClassFeature):
 
 class Rage(ClassFeature):
     name = "Rage"
+    type = "Activa"
     description = "En combate, puedes entrar en un estado de furia que te otorga ventajas y habilidades especiales, pero solo puedes usarlo un número limitado de veces."
     required_level = 1
     level = 1
@@ -94,6 +96,7 @@ class Rage(ClassFeature):
             cancelable=False
         )
 class SongOfRest(ClassFeature):
+    type = "Activa"
     # Metadatos de la feature
     name = "SongOfRest"
     description = (

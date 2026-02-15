@@ -40,6 +40,7 @@ class Actor(ABC):
 
     @property
     def dex_mod(self) -> int:
+        print(self.attributes)
         return (self.attributes["DEX"] - 10) // 2
 
     @property

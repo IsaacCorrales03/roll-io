@@ -21,7 +21,7 @@ class Character(Actor):
         # Identidad básica
         self.name = name
         self.level = 1
-
+        self.token_texture = None
         # Referencias a raza y clase
         self.dnd_class = dnd_class
         self.race = race
@@ -127,12 +127,64 @@ class Character(Actor):
             "features": [
                 {
                     "name": f.name,
+                    "type": f.type,
                     "description": f.description,
                     "level_required": f.level,
                 }
                 for f in self.features
             ],
+            "token_texture": self.token_texture
         }
+    @classmethod
+    def from_dict(
+        cls,
+        data: dict,
+        race: Race,
+        dnd_class: DnDClass,
+    ) -> "Character":
+        """
+        Reconstruye un Character desde datos persistidos (DB).
+        Asume que race y dnd_class ya están resueltas por key.
+        """
+
+        char = cls(
+            id=uuid.UUID(data["id"]),
+            owner_id=uuid.UUID(data["owner_id"]),
+            name=data["name"],
+            race=race,
+            dnd_class=dnd_class,
+        )
+
+        # ---- estado básico ----
+        char.level = data["level"]
+        char.attributes = {
+            "STR": data["strength"],
+            "DEX": data["dexterity"],
+            "CON": data["constitution"],
+            "INT": data["intelligence"],
+            "WIS": data["wisdom"],
+            "CHA": data["charisma"],
+        }
+
+        # ---- HP ----
+        char.max_hp = data["max_hp"]
+        char.hp = data["hp"]
+
+
+        # ---- recalcular derivados ----
+        char.proficiency_bonus = 2 + ((char.level - 1) // 4)
+        char.token_texture = data.get("token_texture", None)
+        # ---- features ----
+        char.features.clear()
+        for lvl in range(1, char.level + 1):
+            feature_classes = dnd_class.features_by_level().get(lvl, [])
+            for feature_cls in feature_classes:
+                feature = feature_cls()
+                feature.level = lvl
+                feature.type = feature_cls.type
+                char.features.append(feature)
+
+        return char
 
 
 def create_character_Class(id: uuid.UUID, owner_id: uuid.UUID, nombre: str, raza: Race, dnd_class: DnDClass):

@@ -564,6 +564,9 @@
             socket.on('player_joined', d => updatePlayers(d.players));
             socket.on('player_left', d => updatePlayers(d.players));
             socket.on('chat_message', d => addChat(d.sender, d.text));
+            socket.on("campaign_started", d => {
+            window.location.href = `/game?code=${d.code}`;
+        });
         };
 
         document.getElementById('chat-form').addEventListener('submit', e => {
@@ -578,6 +581,8 @@
 
             input.value = '';
         });
+
+
     </script>
 
 </body>

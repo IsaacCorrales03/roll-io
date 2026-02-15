@@ -8,6 +8,7 @@ class ClassFeature(ABC):
     required_level: int
     description: str
     level: int
+    type: str
     
     def is_available(self, actor) -> bool:
             return (

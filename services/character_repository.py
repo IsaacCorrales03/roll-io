@@ -1,3 +1,4 @@
+import traceback
 import uuid
 from typing import Optional, Dict, Any, cast
 from services.db_service import create_db_service
@@ -6,44 +7,13 @@ from services.db_service import create_db_service
 class CharacterRepository:
     def __init__(self):
         self.db = create_db_service()
-        self._create_table()
 
-    def _create_table(self):
+    def create(self, character, owner_id: uuid.UUID, texture = None) -> str:
         with self.db.cursor() as cursor:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS characters (
-                    id CHAR(36) PRIMARY KEY,
-                    owner_id CHAR(36) NOT NULL,
-                    name VARCHAR(64) NOT NULL,
-
-                    race_key VARCHAR(32) NOT NULL,
-                    class_key VARCHAR(32) NOT NULL,
-
-                    level INT NOT NULL DEFAULT 1,   
-
-                    strength INT NOT NULL,
-                    dexterity INT NOT NULL,
-                    constitution INT NOT NULL,
-                    intelligence INT NOT NULL,
-                    wisdom INT NOT NULL,
-                    charisma INT NOT NULL,
-
-                    hp INT NOT NULL,
-
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        ON UPDATE CURRENT_TIMESTAMP,
-
-                    CONSTRAINT fk_owner FOREIGN KEY (owner_id)
-                        REFERENCES users(id)
-                        ON DELETE CASCADE
-                        ON UPDATE CASCADE
-                )
-            """)
-        self.db.commit()
-
-    def create(self, character, owner_id: uuid.UUID) -> str:
-        with self.db.cursor() as cursor:
+            if not texture:
+                defalut_token = f"/imgs/{character['class']['name']}.jpg"
+            else:
+                defalut_token = texture
             try:
                 cursor.execute("""
                     INSERT INTO characters (
@@ -51,8 +21,8 @@ class CharacterRepository:
                         level,
                         strength, dexterity, constitution,
                         intelligence, wisdom, charisma,
-                        hp
-                    ) VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        hp, max_hp, token_texture
+                    ) VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     str(character["id"]),
                     str(owner_id),
@@ -66,9 +36,13 @@ class CharacterRepository:
                     character["attributes"]["INT"],
                     character["attributes"]["WIS"],
                     character["attributes"]["CHA"],
-                    character["hp"]["max"]
+                    character["hp"]["current"],
+                    character["hp"]["max"],
+                    defalut_token
                 ))
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 print("Error al crear personaje:", e)
 
         self.db.commit()
@@ -100,3 +74,77 @@ class CharacterRepository:
 
         self.db.commit()
         return deleted
+    
+    def save(self, character: Dict[str, Any], owner_id: uuid.UUID) -> str:
+        with self.db.cursor() as cursor:
+            cursor.execute(
+                "SELECT 1 FROM characters WHERE id = %s",
+                (character["id"],)
+            )
+            exists = cursor.fetchone() is not None
+
+            if exists:
+                cursor.execute("""
+                    UPDATE characters SET
+                        name = %s,
+                        race_key = %s,
+                        class_key = %s,
+                        level = %s,
+                        strength = %s,
+                        dexterity = %s,
+                        constitution = %s,
+                        intelligence = %s,
+                        wisdom = %s,
+                        charisma = %s,
+                        hp = %s,
+                        max_hp = %s,
+                        owner_id = %s,
+                        token_texture = %s
+
+                    WHERE id = %s
+                """, (
+                    character["name"],
+                    character["race"]["key"],
+                    character["class"]["name"],
+                    character["level"],
+                    character["attributes"]["STR"],
+                    character["attributes"]["DEX"],
+                    character["attributes"]["CON"],
+                    character["attributes"]["INT"],
+                    character["attributes"]["WIS"],
+                    character["attributes"]["CHA"],
+                    character["hp"]["current"],
+                    character["hp"]["max"],
+                    str(owner_id),
+                    character["id"],
+                    character["token_texture"]
+                ))
+            else:
+                cursor.execute("""
+                    INSERT INTO characters (
+                        id, owner_id, name, race_key, class_key,
+                        level,
+                        strength, dexterity, constitution,
+                        intelligence, wisdom, charisma,
+                        hp, max_hp
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    character["id"],
+                    str(owner_id),
+                    character["name"],
+                    character["race"]["key"],
+                    character["class"]["name"],
+                    character["level"],
+                    character["attributes"]["STR"],
+                    character["attributes"]["DEX"],
+                    character["attributes"]["CON"],
+                    character["attributes"]["INT"],
+                    character["attributes"]["WIS"],
+                    character["attributes"]["CHA"],
+                    character["hp"]["current"],
+                    character["hp"]["max"],
+                ))
+
+        self.db.commit()
+        return character["id"]
+

@@ -3,13 +3,12 @@ from typing import Dict, Optional, List, Any
 from collections import defaultdict
 from uuid import UUID
 
-from models.world.worldstate import WorldState
+from world.domain.token import Token
+
 from .EventContext import EventContext
 from copy import deepcopy
 from .Event import Event
 from .EventHandler import EventHandler
-from ..world.world import World
-from ..world.registry import WorldRegistry
 from ..querys import QueryHandler, Query
 
 from typing import TYPE_CHECKING
@@ -19,11 +18,9 @@ if TYPE_CHECKING:
 
 @dataclass
 class GameState:
-    # Mundo de juego
-    world_registry: WorldRegistry
-    world: WorldState = field(default_factory=WorldState)
     
     characters: Dict[UUID, "Character"] = field(default_factory=dict)
+    tokens: Dict[UUID, dict] = field(default_factory=dict)
     # NUEVO: recursos por actor
     resources: dict[UUID, dict[str, int]] = field(default_factory=dict)
     # Flujo global
@@ -38,6 +35,7 @@ class GameState:
     event_log: List["Event"] = field(default_factory=list)
     _handlers: dict = field(default_factory=dict)
     _query_handlers: dict = field(default_factory=dict)  # <QueryType, Handler>
+
     def register_handler(self, event_type: str, handler: EventHandler):
         self._handlers.setdefault(event_type, []).append(handler)
     def register_query_handler(self, query_type: type, handler: QueryHandler):
@@ -114,4 +112,18 @@ class GameState:
 
         self.current_turn += 1
         return expired_states
+    def add_token(self, token: dict):
+        print(token)
+        self.tokens[token["id"]] = token
+
+    def move_token(self, token_id: UUID, x: int, y: int):
+        print("token_id", token_id)
+        print(self.tokens)
+        token = self.tokens[token_id]
+        print(token)
+
+        if not token:
+            raise RuntimeError("Token no existe")
+        token["x"] = x
+        token["y"] = y
 

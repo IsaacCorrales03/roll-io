@@ -1,10 +1,17 @@
 import time
+
+from models.events.events import MoveTokenEvent
+from models.querys import GetArmorClass
 __START_TIME__ = time.perf_counter()
+from models.events.EventDispatcher import EventDispatcher
+from services.section_service import SectionService
+from services.token_service import TokenService
+from world.infrastructure.MySQLTokenRepository import MySQLTokenRepository 
 from campaigns.infrastructure.mysql_campaign_repository import MySQLCampaignRepository
 from services.campaign_service import CampaignService
 from services.character_repository import CharacterRepository
 from services.character_service import CharacterService
-from world.infrastructure.inmemory_world_repository import InMemoryWorldRepository
+from world.infrastructure.MySQLWorldRepository import MySQLWorldRepository
 from uuid import UUID
 from flask import Flask, g, make_response, redirect, render_template, request
 from flask_cors import CORS
@@ -17,6 +24,8 @@ from auth.infrastructure.user_repository import MySQLUserRepository
 from auth.infrastructure.auth_session_repository import MySQLAuthSessionRepository
 from services.service_validator import DBSessionValidator
 from auth.infrastructure.bcrypt_hasher import BcryptPasswordHasher
+from world.infrastructure.MySQLSectionRepository import MySQLSectionRepository
+from world.ports.section_repository import SectionRepository
 # Blueprints
 from routes.races import races_bp
 from routes.dnd_clasess import classes_bp
@@ -25,12 +34,15 @@ from routes.campaign_routes import campaign_bp
 # Utils
 from services.world_service import WorldService
 from utils.gen_code import generate_campaign_code
+from utils.game_state_builder import build_game_state
 
-
-
+from models.events.GameState import GameState
 connected_clients = {}
 campaigns = {}
 worlds = {}
+socket_campaigns: dict[str, str] = {}
+
+game_states: dict[str, GameState] = {}
 
 # ==========================
 # App setup
@@ -81,8 +93,24 @@ character_service = CharacterService(character_repo)
 campaign_repo = MySQLCampaignRepository(db)
 campaign_service = CampaignService(campaign_repo)
 
-world_repo = InMemoryWorldRepository()
+world_repo = MySQLWorldRepository(db)
 world_service = WorldService(world_repo)
+section_repo = MySQLSectionRepository(db)
+section_service = SectionService(section_repo)
+
+token_repo = MySQLTokenRepository(db)  
+token_service = TokenService(token_repo)
+
+def get_character_id(players: list[dict], my_user_id: str) -> str | None:
+    for p in players:
+        if p["user_id"] == my_user_id:
+            return p["character_uuid"]
+    return None
+
+def get_game_state(campaign_code: str) -> GameState:
+    if campaign_code not in game_states:
+        game_states[campaign_code] = build_game_state(campaign_code, campaigns, character_repo)
+    return game_states[campaign_code]
 
 
 @app.before_request
@@ -105,6 +133,8 @@ def inject_services():
     g.auth_service = auth_service
     g.campaign_service = campaign_service
     g.world_service = world_service
+    g.section_service = section_service
+    g.token_service = token_service
 
 @app.context_processor
 def inject_user():
@@ -242,7 +272,6 @@ def lobby(code):
     if not campaign_id:
         return "Campaign ID is required", 400
 
-    print(f"Entrando a lobby con code={code} y campaign_id={campaign_id}")
     return render_template("lobby.html", code=code, campaign_id=campaign_id)
 
 @app.route("/world/<campaign_id>")
@@ -278,7 +307,6 @@ def start_campaign(campaign_id):
 
     # 🔒 Obtener o reutilizar lobby
     lobby_code = get_or_create_lobby(campaign_id)
-
     return render_template(
         "lobby.html",
         code=lobby_code,
@@ -303,7 +331,6 @@ def get_or_create_lobby(campaign_id: str) -> str:
 @app.route("/join/<code>")
 def join_lobby(code):
     # Validar lobby
-    print(campaigns)
     if code not in campaigns:
         return "Lobby not found", 404
 
@@ -327,10 +354,7 @@ def join_lobby(code):
     # Obtener personajes del usuario
     characters = character_repo.get_by_owner(str(user.id))  # lista de dicts
 
-    # NOTA:
-    # El sid todavía no existe aquí (HTTP != WS),
-    # se añadirá definitivamente en el evento `join_campaign`
-    # Pero dejamos claro que este usuario pertenece al lobby.
+
 
     return render_template(
         "lobby.html",
@@ -338,6 +362,86 @@ def join_lobby(code):
         dm=False,
         campaign_id=campaign_id,
         characters=characters
+    )
+
+
+@app.route("/game")
+def game():
+    code = request.args.get("code")
+    if not code or code not in campaigns:
+        return "Campaña no válida", 404
+
+    campaign_id = campaigns[code]["campaign_id"]
+    campaign_instance = campaign_repo.get_by_id(campaign_id)
+    if not campaign_instance:
+        return "Campaña no encontrada", 404 
+    
+    world = world_repo.get(campaign_instance["world_id"])
+    if not world:    
+        return "Mundo no encontrado", 404
+    
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        return redirect("/login")
+
+    # Buscar sesión
+    session = auth_service.session_repo.get(UUID(session_id))
+    if not session or session.revoked:
+        return redirect("/login")
+    user_id = str(session.user_id)
+    if not user_id:
+        return redirect("/login")
+
+    world = world_repo.get(campaign_instance["world_id"])
+    campaign_model = campaigns[code]
+    
+    players = [
+        {
+            "user_id": p["user_id"],
+            "username": p["username"],
+            "character_uuid": p["character_uuid"],
+            "is_dm": p["is_dm"]
+        }
+        for p in campaign_model["players"].values()
+    ]
+    current_scene = world.scenes[0] # type: ignore
+    my_character_id = get_character_id(players, user_id)
+    tokens = []
+    my_token = None
+    game_state = get_game_state(code)
+
+    for p in players:
+        character_id = p.get("character_uuid")
+        if not character_id:
+            continue
+
+        token = g.token_service.get_by_character(UUID(character_id))
+        if not token:
+            continue
+        
+        tokens.append(token)
+        game_state.add_token(token)
+        if character_id == my_character_id:
+            my_token = token
+    current_section = current_scene.sections[0] if current_scene.sections else None  # type: ignore
+    is_dm = any(p["is_dm"] and p["user_id"] == user_id for p in players)
+    
+    return render_template(
+        "game.html",
+        code=code,
+        players=players,
+        campaign_model=campaign_model, 
+        world=world,
+        my_character_id=my_character_id,
+        current_scene={
+            "id": str(current_scene.id),
+            "name": current_scene.name,
+            "map_url": current_scene.map_url
+        },
+        tokens=tokens,
+        my_token=my_token if my_token else None,
+        is_dm=is_dm,
+        current_section = current_section.to_dict() if current_section else None
     )
 
 # ========================================
@@ -379,10 +483,9 @@ def handle_join_campaign(data):
         return
 
     join_room(code)
-
+    socket_campaigns[request.sid] = code #type: ignore
     user_id = str(user.id)
     campaign_id = campaigns[code]["campaign_id"]
-
     # determinar DM
     campaign = campaign_repo.get_by_id(campaign_id)
     is_dm = campaign and str(campaign["owner_id"]) == user_id
@@ -406,31 +509,33 @@ def handle_join_campaign(data):
 
 @socketio.on("start_campaign")
 def start_game(data):
-    print("Intentando iniciar campaña con data:", data)
-    code = data["code"]
+    code = data.get("code")
     campaign = campaigns.get(code)
 
     if not campaign:
         return
 
-    players = campaigns[code]["players"].values()  # lista de players conectados
-    print(players)
+    players = campaign["players"].values()
+
     not_ready = [
         p for p in players
-        if not p["is_dm"] and not p["character_uuid"]
+        if not p["is_dm"] and not p.get("character_uuid")
     ]
-
     if not_ready:
-        print("No todos los jugadores están listos:", not_ready )
-        emit("campaign_start_error", {
-            "reason": "No todos los jugadores están listos"
-        }, to=request.sid) #type: ignore
+        emit(
+            "campaign_start_error",
+            {"reason": "No todos los jugadores están listos"},
+            to=request.sid  # type: ignore
+        )
         return
+    
+    # Campaña válida → todos entran al juego
+    emit(
+        "campaign_started",
+        {"code": code},
+        to=code
+    )
 
-    # Todos listos → iniciar
-    emit("campaign_started", {
-        "code": code
-    }, to=code)
 
 @socketio.on("disconnect")
 def handle_disconnect():
@@ -465,9 +570,9 @@ def handle_select_character(data):
     )
 
 
-
 @socketio.on("chat_message")
 def handle_chat_message(data):
+    print("Mensaje recibido:", data)
     code = data.get("code")
     text = data.get("text", "").strip()
     sid = request.sid  # type: ignore
@@ -491,7 +596,63 @@ def handle_chat_message(data):
         to=code
     )
 
+@socketio.on("get_ac")
+def handle_get_ac(data):
+    try:
+        actor_id = UUID(data["actor_id"])
+    except Exception:
+        emit("error", {"message": "Invalid actor_id"})
+        return
 
+    campaign_code = socket_campaigns.get(request.sid) #type: ignore
+    if not campaign_code:
+        emit("error", {"message": "Campaign not found"})
+        return
+
+    state = get_game_state(campaign_code)
+    try:
+        result = state.query(
+            GetArmorClass(
+                actor_id=actor_id,
+                context="ui"
+            )
+        )
+    
+    except Exception as e:
+        import traceback
+        print("Error al calcular AC:")
+        traceback.print_exc()
+        emit("error", {"message": str(e)})
+        return
+    print(f"AC result for actor {actor_id}: {result.value} (breakdown: {result.breakdown})")
+    emit("ac_result", {
+        "actor_id": str(actor_id),
+        "value": result.value,
+        "breakdown": result.breakdown
+    })
+
+@socketio.on("move_token")
+def handle_move_token(data):
+    campaign_code = data["campaign_code"]
+    token_id = data["token_id"]
+    x = data["x"]
+    y = data["y"]
+
+    state = game_states[campaign_code]
+    event = MoveTokenEvent(token_id=token_id, x=x, y=y) # type: ignore
+    print(token_id, x, y)
+    try:
+        state.dispatch(event)
+
+        emit("token_moved", {
+            "token_id": token_id,
+            "x": x,
+            "y": y
+        }, to=campaign_code)
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        emit("error", {"message": str(e)})
 
 
 startup_time = time.perf_counter() - __START_TIME__

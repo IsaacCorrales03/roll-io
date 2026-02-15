@@ -14,7 +14,8 @@ def get_character_service():
 def get_auth_service():
     return g.auth_service
 
-
+def get_token_service():    
+    return g.token_service
 def get_current_user_id() -> str | None:
     """
     Obtiene el user_id a partir de la cookie session_id.
@@ -50,7 +51,6 @@ def create_character():
 
     if not name or not race_key or not class_key:
         return jsonify({"error": "Datos incompletos"}), 400
-
     try:
         character = get_character_service().create(
             UUID(owner_id),
@@ -58,6 +58,23 @@ def create_character():
             race_key,
             class_key
         )
+
+        # -------- CREATE TOKEN --------
+        try:
+            get_token_service().create(
+                character_id=character.id,
+                x=0,
+                y=0,
+                size=(1, 1),
+                owner_user_id=UUID(owner_id),
+                is_visible=True,
+                label=character.name,
+            )
+            print("Token creado para personaje:", character.name)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print("Error al crear token para personaje:", e)
     except KeyError:
         return jsonify({"error": "Raza o clase inválida"}), 400
     except Exception as e:
@@ -67,6 +84,7 @@ def create_character():
         "id": str(character.id),
         "character": character.to_json()
     }), 201
+
 
 
 @character_bp.get("/load")

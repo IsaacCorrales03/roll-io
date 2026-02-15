@@ -79,7 +79,6 @@ class UseRageAction(Action):
         state.dispatch(event)
         return event
 
-
 class UseSongOfRestAction(Action):
     def __init__(self, command: UseSongOfRestCommand):
         self.command = command

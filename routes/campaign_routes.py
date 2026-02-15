@@ -1,5 +1,7 @@
-from uuid import UUID
+import os
+from uuid import UUID, uuid4
 from flask import Blueprint, request, jsonify, g
+from werkzeug.utils import secure_filename
 
 campaign_bp = Blueprint("campaign", __name__, url_prefix="/campaign")
 
@@ -18,6 +20,8 @@ def get_world_service():
 def get_auth_service():
     return g.auth_service
 
+def get_section_service():
+    return g.section_service
 
 def get_current_user_id() -> UUID | None:
     session_id = request.cookies.get("session_id")
@@ -37,32 +41,55 @@ def get_current_user_id() -> UUID | None:
 # Routes
 # =====================================
 
-@campaign_bp.post("/create")
-def create_campaign():
+@campaign_bp.post("/create_full")
+def create_full_campaign():
+
     user_id = get_current_user_id()
     if not user_id:
         return jsonify({"error": "No autenticado"}), 401
 
-    data = request.json or {}
+    campaign_name = request.form.get("campaign_name")
+    world_name = request.form.get("world_name")
+    world_lore = request.form.get("world_lore", "")
+    scene_name = request.form.get("scene_name")
 
-    campaign_name = data.get("campaign", {}).get("name")
-    world_name = data.get("world", {}).get("name")
-    world_lore = data.get("world", {}).get("lore", "")
-    scene_name = data.get("scene", {}).get("name")
-    scene_map = data.get("scene", {}).get("map_url")
+    tile_size = int(request.form.get("tile_size")) # type: ignore
+    offset_x = int(request.form.get("offset_x"))# type: ignore
+    offset_y = int(request.form.get("offset_y"))# type: ignore
+    width_px = int(request.form.get("width_px"))# type: ignore
+    height_px = int(request.form.get("height_px"))# type: ignore
 
-    if not all([campaign_name, world_name, scene_name, scene_map]):
+    map_file = request.files.get("map_file")
+
+    if not all([campaign_name, world_name, scene_name, map_file]):
         return jsonify({"error": "Datos incompletos"}), 400
 
-    # 1️⃣ Crear mundo + escena inicial
+    UPLOAD_FOLDER = "static/uploads/maps"
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    # ---------- Guardar imagen ----------
+    filename = f"{uuid4()}_{secure_filename(map_file.filename)}" # type: ignore
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    map_file.save(filepath) # type: ignore
+
+    map_url = f"/uploads/maps/{filename}"
+
+    # ---------- Crear mundo ----------
     world = get_world_service().create_world(
         name=world_name,
         lore=world_lore,
         initial_scene_name=scene_name,
-        initial_scene_map_url=scene_map,
+        initial_scene_map_url=map_url,
+        initial_scene_description="",
+        sections_data=[{
+            "tile_size": tile_size,
+            "offset_x": offset_x,
+            "offset_y": offset_y,
+            "width_px": width_px,
+            "height_px": height_px,
+            "texture_url": map_url,
+        }]
     )
 
-    # 2️⃣ Crear campaña asociada
     campaign = get_campaign_service().create(
         owner_id=user_id,
         name=campaign_name,
@@ -74,7 +101,6 @@ def create_campaign():
         "world_id": str(world.id)
     }), 201
 
-
 @campaign_bp.post("/join")
 def join_campaign():
     user_id = get_current_user_id()
@@ -83,7 +109,6 @@ def join_campaign():
 
     data = request.json or {}
     campaign_id = data.get("campaign_id")
-
     if not campaign_id:
         return jsonify({"error": "campaign_id requerido"}), 400
 

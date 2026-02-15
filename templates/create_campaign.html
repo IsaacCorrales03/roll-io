@@ -1,155 +1,652 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Crear campaña</title>
-    <style>
-        body {
-            font-family: system-ui, sans-serif;
-            background: #0f172a;
-            color: #e5e7eb;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+<meta charset="UTF-8">
+<title>Crear Campaña - Chronicle20</title>
+<style>
+    * {
+        box-sizing: border-box;
+    }
 
-        form {
-            background: #020617;
-            padding: 2rem;
-            border-radius: 12px;
-            width: 360px;
-        }
+    body {
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #eee;
+        min-height: 100vh;
+    }
 
-        h1 {
-            margin-bottom: 1rem;
-            font-size: 1.25rem;
-        }
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 30px 20px;
+    }
 
-        h2 {
-            margin-top: 1.5rem;
-            font-size: 1rem;
-            color: #c7d2fe;
-        }
+    h1 {
+        margin: 0 0 30px 0;
+        font-size: 32px;
+        font-weight: 300;
+        letter-spacing: 1px;
+        text-align: center;
+        color: #fff;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
 
-        input, textarea, button {
-            width: 100%;
-            padding: 0.6rem;
-            margin-top: 0.75rem;
-            border-radius: 6px;
-            border: none;
-            font-family: inherit;
-        }
+    .grid {
+        display: grid;
+        grid-template-columns: 380px 1fr;
+        gap: 24px;
+        align-items: start;
+    }
 
-        input, textarea {
-            background: #1e293b;
-            color: #e5e7eb;
-        }
+    .panel {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        padding: 24px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
 
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
+    .panel h2 {
+        margin: 0 0 20px 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #a78bfa;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
 
-        button {
-            background: #6366f1;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 1.25rem;
-        }
+    .form-group {
+        margin-bottom: 18px;
+    }
 
-        .error {
-            color: #f87171;
-            margin-top: 0.75rem;
-        }
-    </style>
+    label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #cbd5e1;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.3);
+        color: white;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    textarea:focus {
+        outline: none;
+        border-color: #a78bfa;
+        background: rgba(0, 0, 0, 0.4);
+        box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+    }
+
+    textarea {
+        resize: vertical;
+        min-height: 80px;
+        font-family: inherit;
+    }
+
+    input[type="file"] {
+        width: 100%;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px dashed rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.2);
+        color: #cbd5e1;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    input[type="file"]:hover {
+        border-color: #a78bfa;
+        background: rgba(167, 139, 250, 0.1);
+    }
+
+    .btn {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+        border: none;
+        color: white;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+        border-radius: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+    }
+
+    .btn:active {
+        transform: translateY(0);
+    }
+
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .canvas-panel {
+        position: relative;
+        min-height: 600px;
+    }
+
+    .canvas-wrapper {
+        position: relative;
+        width: 100%;
+        height: 600px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #000;
+        cursor: grab;
+    }
+
+    .canvas-wrapper.panning {
+        cursor: grabbing;
+    }
+
+    .canvas-wrapper.selecting {
+        cursor: crosshair;
+    }
+
+    canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .controls {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        display: flex;
+        gap: 8px;
+        z-index: 10;
+    }
+
+    .control-btn {
+        width: 40px;
+        height: 40px;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        font-size: 18px;
+    }
+
+    .control-btn:hover {
+        background: rgba(167, 139, 250, 0.3);
+        border-color: #a78bfa;
+    }
+
+    .control-btn.active {
+        background: #a78bfa;
+        border-color: #a78bfa;
+    }
+
+    .info-badge {
+        position: absolute;
+        bottom: 16px;
+        left: 16px;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #cbd5e1;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .help-text {
+        font-size: 12px;
+        color: #94a3b8;
+        margin-top: 4px;
+        font-style: italic;
+    }
+
+    .divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.1);
+        margin: 20px 0;
+    }
+</style>
 </head>
 <body>
 
-<form id="campaign-form">
-    <h1>Crear campaña</h1>
+<div class="container">
+    <h1>✨ Crear Nueva Campaña</h1>
 
-    <!-- Campaign -->
-    <input
-        type="text"
-        id="campaign-name"
-        placeholder="Nombre de la campaña"
-        required
-    >
+    <div class="grid">
 
-    <!-- World -->
-    <h2>Mundo</h2>
+        <!-- PANEL IZQUIERDO -->
+        <div class="panel">
+            <h2>📋 Información</h2>
 
-    <input
-        type="text"
-        id="world-name"
-        placeholder="Nombre del mundo"
-        required
-    >
+            <div class="form-group">
+                <label>Nombre de la campaña</label>
+                <input type="text" id="campaign-name" placeholder="Ej: La Mina Perdida">
+            </div>
 
-    <textarea
-        id="world-lore"
-        placeholder="Lore / descripción del mundo"
-    ></textarea>
+            <div class="form-group">
+                <label>Nombre del mundo</label>
+                <input type="text" id="world-name" placeholder="Ej: Faerûn">
+            </div>
 
-    <!-- Scene -->
-    <h2>Escena inicial</h2>
+            <div class="form-group">
+                <label>Lore del mundo</label>
+                <textarea id="world-lore" placeholder="Descripción del mundo, historia, contexto..."></textarea>
+            </div>
 
-    <input
-        type="text"
-        id="scene-name"
-        placeholder="Nombre de la escena"
-        required
-    >
+            <div class="divider"></div>
 
-    <input
-        type="url"
-        id="scene-map"
-        placeholder="URL del mapa (jpg / png)"
-        required
-    >
+            <h2>🗺️ Escena Inicial</h2>
 
-    <button type="submit">Crear campaña</button>
-    <div id="error" class="error"></div>
-</form>
+            <div class="form-group">
+                <label>Nombre de la escena</label>
+                <input type="text" id="scene-name" placeholder="Ej: Entrada de la mina">
+            </div>
+
+            <div class="form-group">
+                <label>Mapa de la escena</label>
+                <input type="file" id="map-upload" accept="image/*">
+                <div class="help-text">Formatos: JPG, PNG, WEBP</div>
+            </div>
+
+            <div class="form-group">
+                <label>Tamaño del tile (px)</label>
+                <input type="number" id="tile-size" value="64" min="32" max="128" step="8">
+                <div class="help-text">Define la cuadrícula del mapa</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <button class="btn" onclick="createCampaign()">🚀 Crear Campaña</button>
+        </div>
+
+        <!-- CANVAS -->
+        <div class="panel canvas-panel">
+            <h2>🎨 Editor de Mapa</h2>
+            
+            <div class="canvas-wrapper" id="canvas-container">
+                <canvas id="map-canvas"></canvas>
+
+                <div class="controls">
+                    <button class="control-btn" id="pan-btn" onclick="setMode('pan')" title="Pan (Mover)">✋</button>
+                    <button class="control-btn active" id="select-btn" onclick="setMode('select')" title="Seleccionar área">⬚</button>
+                    <button class="control-btn" onclick="toggleGrid()" title="Toggle Grid">⊞</button>
+                    <button class="control-btn" onclick="resetView()" title="Reset View">↻</button>
+                </div>
+
+                <div class="info-badge" id="info">
+                    <div>Arrastra para seleccionar el área de juego</div>
+                    <div id="selection-info"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
 
 <script>
-document.getElementById("campaign-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
+/* ================================
+   VARIABLES GLOBALES
+================================ */
+const canvas = document.getElementById("map-canvas");
+const ctx = canvas.getContext("2d");
+const container = document.getElementById("canvas-container");
+const fileInput = document.getElementById("map-upload");
 
-    const payload = {
-        campaign: {
-            name: document.getElementById("campaign-name").value
-        },
-        world: {
-            name: document.getElementById("world-name").value,
-            lore: document.getElementById("world-lore").value
-        },
-        scene: {
-            name: document.getElementById("scene-name").value,
-            map_url: document.getElementById("scene-map").value
-        }
+let image = new Image();
+let selectedFile = null;
+
+// Estado del canvas
+let offsetX = 0;
+let offsetY = 0;
+let scale = 1;
+
+// Selección
+let selecting = false;
+let selectionStart = { x: 0, y: 0 };
+let selection = null;
+
+// Pan
+let panning = false;
+let panStart = { x: 0, y: 0 };
+let panOffset = { x: 0, y: 0 };
+
+// Configuración
+let showGrid = true;
+let mode = 'select'; // 'select' | 'pan'
+
+/* ================================
+   CARGA DE IMAGEN
+================================ */
+fileInput.addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    selectedFile = file;
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        image.src = evt.target.result;
     };
+    reader.readAsDataURL(file);
+});
 
-    const errorEl = document.getElementById("error");
-    errorEl.textContent = "";
+image.onload = function() {
+    // Ajustar canvas al contenedor
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
 
-    const res = await fetch("/api/campaigns/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload)
-    });
+    // Centrar imagen
+    const scaleX = canvas.width / image.width;
+    const scaleY = canvas.height / image.height;
+    scale = Math.min(scaleX, scaleY, 1) * 0.9;
 
-    const data = await res.json();
+    panOffset.x = (canvas.width - image.width * scale) / 2;
+    panOffset.y = (canvas.height - image.height * scale) / 2;
 
-    if (!res.ok) {
-        errorEl.textContent = data.error || "Error desconocido";
+    draw();
+};
+
+/* ================================
+   MODOS DE INTERACCIÓN
+================================ */
+function setMode(newMode) {
+    mode = newMode;
+    document.getElementById('pan-btn').classList.toggle('active', mode === 'pan');
+    document.getElementById('select-btn').classList.toggle('active', mode === 'select');
+    container.classList.toggle('selecting', mode === 'select');
+}
+
+function toggleGrid() {
+    showGrid = !showGrid;
+    draw();
+}
+
+function resetView() {
+    if (!image.src) return;
+    
+    const scaleX = canvas.width / image.width;
+    const scaleY = canvas.height / image.height;
+    scale = Math.min(scaleX, scaleY, 1) * 0.9;
+
+    panOffset.x = (canvas.width - image.width * scale) / 2;
+    panOffset.y = (canvas.height - image.height * scale) / 2;
+
+    selection = null;
+    draw();
+}
+
+/* ================================
+   MOUSE EVENTS
+================================ */
+canvas.addEventListener("mousedown", e => {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    if (mode === 'pan') {
+        panning = true;
+        panStart = { x: mouseX - panOffset.x, y: mouseY - panOffset.y };
+        container.classList.add('panning');
+    } else if (mode === 'select') {
+        selecting = true;
+        // Convertir a coordenadas de imagen
+        selectionStart = screenToImage(mouseX, mouseY);
+    }
+});
+
+canvas.addEventListener("mousemove", e => {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    if (panning) {
+        panOffset.x = mouseX - panStart.x;
+        panOffset.y = mouseY - panStart.y;
+        draw();
+    } else if (selecting) {
+        const current = screenToImage(mouseX, mouseY);
+        
+        selection = {
+            x: Math.min(selectionStart.x, current.x),
+            y: Math.min(selectionStart.y, current.y),
+            width: Math.abs(current.x - selectionStart.x),
+            height: Math.abs(current.y - selectionStart.y)
+        };
+
+        draw();
+        updateSelectionInfo();
+    }
+});
+
+canvas.addEventListener("mouseup", () => {
+    panning = false;
+    selecting = false;
+    container.classList.remove('panning');
+});
+
+canvas.addEventListener("mouseleave", () => {
+    panning = false;
+    selecting = false;
+    container.classList.remove('panning');
+});
+
+// Zoom con rueda del mouse
+canvas.addEventListener("wheel", e => {
+    e.preventDefault();
+    
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.max(0.1, Math.min(5, scale * zoomFactor));
+
+    // Zoom hacia el mouse
+    const worldX = (mouseX - panOffset.x) / scale;
+    const worldY = (mouseY - panOffset.y) / scale;
+
+    panOffset.x = mouseX - worldX * newScale;
+    panOffset.y = mouseY - worldY * newScale;
+
+    scale = newScale;
+    draw();
+});
+
+/* ================================
+   CONVERSIÓN DE COORDENADAS
+================================ */
+function screenToImage(screenX, screenY) {
+    return {
+        x: Math.round((screenX - panOffset.x) / scale),
+        y: Math.round((screenY - panOffset.y) / scale)
+    };
+}
+
+function imageToScreen(imageX, imageY) {
+    return {
+        x: imageX * scale + panOffset.x,
+        y: imageY * scale + panOffset.y
+    };
+}
+
+/* ================================
+   RENDERIZADO
+================================ */
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!image.src) {
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sube un mapa para empezar', canvas.width / 2, canvas.height / 2);
         return;
     }
 
-    window.location.href = `/campaign/${data.id}/start`;
+    // Dibujar imagen
+    ctx.save();
+    ctx.translate(panOffset.x, panOffset.y);
+    ctx.scale(scale, scale);
+    ctx.drawImage(image, 0, 0);
+    ctx.restore();
+
+    // Dibujar grid
+    if (showGrid) {
+        drawGrid();
+    }
+
+    // Dibujar selección
+    if (selection) {
+        const screenPos = imageToScreen(selection.x, selection.y);
+        const width = selection.width * scale;
+        const height = selection.height * scale;
+
+        ctx.strokeStyle = '#a78bfa';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(screenPos.x, screenPos.y, width, height);
+
+        ctx.fillStyle = 'rgba(167, 139, 250, 0.1)';
+        ctx.fillRect(screenPos.x, screenPos.y, width, height);
+
+        // Esquinas
+        const cornerSize = 8;
+        ctx.fillStyle = '#a78bfa';
+        ctx.fillRect(screenPos.x - cornerSize/2, screenPos.y - cornerSize/2, cornerSize, cornerSize);
+        ctx.fillRect(screenPos.x + width - cornerSize/2, screenPos.y - cornerSize/2, cornerSize, cornerSize);
+        ctx.fillRect(screenPos.x - cornerSize/2, screenPos.y + height - cornerSize/2, cornerSize, cornerSize);
+        ctx.fillRect(screenPos.x + width - cornerSize/2, screenPos.y + height - cornerSize/2, cornerSize, cornerSize);
+    }
+}
+
+function drawGrid() {
+    const tileSize = parseInt(document.getElementById('tile-size').value) || 64;
+    
+    ctx.save();
+    ctx.translate(panOffset.x, panOffset.y);
+    ctx.scale(scale, scale);
+
+    ctx.strokeStyle = 'rgba(167, 139, 250, 0.2)';
+    ctx.lineWidth = 1 / scale;
+
+    // Líneas verticales
+    for (let x = 0; x < image.width; x += tileSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, image.height);
+        ctx.stroke();
+    }
+
+    // Líneas horizontales
+    for (let y = 0; y < image.height; y += tileSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(image.width, y);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+function updateSelectionInfo() {
+    const tileSize = parseInt(document.getElementById('tile-size').value) || 64;
+    const tilesX = Math.floor(selection.width / tileSize);
+    const tilesY = Math.floor(selection.height / tileSize);
+    
+    document.getElementById('selection-info').textContent = 
+        `Área: ${selection.width}×${selection.height}px (${tilesX}×${tilesY} tiles)`;
+}
+
+/* ================================
+   CREAR CAMPAÑA
+================================ */
+async function createCampaign() {
+    if (!selectedFile) {
+        alert("❌ Debes subir un mapa");
+        return;
+    }
+
+    if (!selection) {
+        alert("❌ Debes seleccionar una sección del mapa");
+        return;
+    }
+
+    const campaignName = document.getElementById("campaign-name").value;
+    const worldName = document.getElementById("world-name").value;
+    const sceneName = document.getElementById("scene-name").value;
+
+    if (!campaignName || !worldName || !sceneName) {
+        alert("❌ Completa todos los campos obligatorios");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("campaign_name", campaignName);
+    formData.append("world_name", worldName);
+    formData.append("world_lore", document.getElementById("world-lore").value);
+    formData.append("scene_name", sceneName);
+    formData.append("tile_size", parseInt(document.getElementById("tile-size").value));
+    formData.append("offset_x", Math.round(selection.x));
+    formData.append("offset_y", Math.round(selection.y));
+    formData.append("width_px", Math.round(selection.width));
+    formData.append("height_px", Math.round(selection.height));
+    formData.append("map_file", selectedFile);
+
+    try {
+        const res = await fetch("/api/campaigns/create_full", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            window.location.href = "/campaign/" + data.id;
+        } else {
+            alert("❌ Error: " + (data.error || "Error interno"));
+        }
+    } catch (err) {
+        alert("❌ Error de conexión: " + err.message);
+    }
+}
+
+// Ajustar canvas al redimensionar ventana
+window.addEventListener('resize', () => {
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    draw();
 });
 </script>
 

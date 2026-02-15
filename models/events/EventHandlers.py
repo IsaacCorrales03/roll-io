@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from models.world.location import Location
 from .EventHandler import EventHandler
 from .Event import Event
 from .EventContext import EventContext
@@ -155,64 +154,6 @@ class StunnedAttackHandler(EventHandler):
                 # Cancelar el ataque original
                 raise RuntimeError("Ataque cancelado por aturdimiento")
             
-class EnterLocationHandler(EventHandler):
-    def handle(self, event: Event, state: GameState):
-        if event.type != "enter_location":
-            return
-
-        ctx = event.context
-        if ctx is None or ctx.actor_id is None or ctx.location_id is None:
-            return
-
-        actor = state.characters.get(ctx.actor_id)
-        location_id = ctx.location_id
-
-        if actor is None:
-            return
-
-        if location_id not in state.world_registry.locations:
-            raise RuntimeError("Location inexistente")
-
-        actor.current_location = location_id
-
-        # Dispara efectos secundarios
-        state.dispatch(Event(
-            type="location_entered",
-            context=ctx,
-            payload={},
-            cancelable=False
-        ))
-
-class RevealVisibilityHandler(EventHandler):
-    def handle(self, event: Event, state: GameState):
-        if event.type != "location_entered":
-            return
-
-        if event.context is None or event.context.location_id is None:
-            return
-
-        loc_id = event.context.location_id
-        location = state.world_registry.get(Location, UUID(loc_id))
-
-        for rule in location.visibility.revealed_by:
-            if rule == "enter_city":
-                break
-        location.reveal()
-
-class CreateLocationHandler(EventHandler):
-    def handle(self, event: Event, state: GameState):
-        if event.type != "create_location":
-            return
-
-        data = event.payload
-        location = Location(**data)
-        state.world_registry.add(location)
-        state.dispatch(Event(
-            type="location_created",
-            context=event.context,
-            payload={"location_id": str(location.id)},
-            cancelable=False
-        ))
 
 class EntityMovedHandler(EventHandler):
     def handle(self, event: Event, state: GameState) -> None:
@@ -228,6 +169,13 @@ class EntityMovedHandler(EventHandler):
             return
 
         actor.current_location = ctx.location_id
+        
+class TokenMovedHandler(EventHandler):
+    def handle(self, event: Event, state: GameState) -> None:
+        if event.type != "token_moved":
+            return
+        
+        state.move_token(event.payload["token_id"], event.payload["x"], event.payload["y"])
 
 class SpatialActionValidator(EventHandler):
     def handle(self, event: Event, state: GameState) -> None:
