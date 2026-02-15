@@ -572,7 +572,6 @@ def handle_select_character(data):
 
 @socketio.on("chat_message")
 def handle_chat_message(data):
-    print("Mensaje recibido:", data)
     code = data.get("code")
     text = data.get("text", "").strip()
     sid = request.sid  # type: ignore
@@ -620,11 +619,9 @@ def handle_get_ac(data):
     
     except Exception as e:
         import traceback
-        print("Error al calcular AC:")
         traceback.print_exc()
         emit("error", {"message": str(e)})
         return
-    print(f"AC result for actor {actor_id}: {result.value} (breakdown: {result.breakdown})")
     emit("ac_result", {
         "actor_id": str(actor_id),
         "value": result.value,
@@ -640,7 +637,6 @@ def handle_move_token(data):
 
     state = game_states[campaign_code]
     event = MoveTokenEvent(token_id=token_id, x=x, y=y) # type: ignore
-    print(token_id, x, y)
     try:
         state.dispatch(event)
 
@@ -651,7 +647,7 @@ def handle_move_token(data):
         }, to=campaign_code)
     except Exception as e:
         import traceback
-        print(traceback.format_exc())
+        traceback.print_exc()
         emit("error", {"message": str(e)})
 
 

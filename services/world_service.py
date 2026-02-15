@@ -36,7 +36,6 @@ class WorldService:
         )
 
         # Crear secciones
-        print(sections_data)
         for s in sections_data:
             section = Section(
                 id=uuid4(),

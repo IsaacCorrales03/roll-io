@@ -70,11 +70,9 @@ def create_character():
                 is_visible=True,
                 label=character.name,
             )
-            print("Token creado para personaje:", character.name)
         except Exception as e:
             import traceback
             traceback.print_exc()
-            print("Error al crear token para personaje:", e)
     except KeyError:
         return jsonify({"error": "Raza o clase inválida"}), 400
     except Exception as e:

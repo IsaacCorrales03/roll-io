@@ -113,14 +113,10 @@ class GameState:
         self.current_turn += 1
         return expired_states
     def add_token(self, token: dict):
-        print(token)
         self.tokens[token["id"]] = token
 
     def move_token(self, token_id: UUID, x: int, y: int):
-        print("token_id", token_id)
-        print(self.tokens)
         token = self.tokens[token_id]
-        print(token)
 
         if not token:
             raise RuntimeError("Token no existe")
