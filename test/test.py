@@ -1,5 +1,5 @@
 from uuid import uuid4
-from models.character import Character
+from src.core.character.character import Character
 from models.events.Event import Event
 from models.events.GameState import GameState
 from models.events.EventContext import EventContext
@@ -7,12 +7,12 @@ from models.events.EventDispatcher import EventDispatcher
 from models.events.EventHandler import EventHandler
 from models.races import human
 from models.dndclasses import Bard, Barbarian
-from models.commands import *
+from src.core.game.commands import *
 from models.actions.actions import *
-from models.weapon import Weapon
+from src.core.items.weapon import Weapon
 from models.events.EventHandlers import *
-from models.querys import *
-from models.ProgresionSystem import ProgressionSystem
+from src.core.game.querys import *
+from src.core.character.ProgresionSystem import ProgressionSystem
 
 # Crear un arma simple
 sword = Weapon(

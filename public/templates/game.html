@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Game - Chronicle20</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/game.css') }}">
+    <style>
+        
+    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+</head>
+
+<body class="bg-slate-950 text-white">
+
+    <!-- Animated background blobs -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none" style="z-index: 0;">
+        <div id="blob1" class="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl"></div>
+        <div id="blob2" class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="game-layout" style="position: relative; z-index: 1;">
+
+        <!-- WRAPPER RELATIVO PARA MAPA Y CHAT -->
+        <div style="position: relative; height: calc(100vh - 32px);">
+            <!-- MAPA CON PAN/ZOOM -->
+            <div class="map-viewport" id="map-viewport">
+                <div class="map-container" id="map-container">
+                    <!-- Canvas del mapa -->
+                    <canvas id="map-canvas"></canvas>
+
+                    <!-- Grid overlay -->
+                    <canvas id="grid-canvas" class="grid-overlay"></canvas>
+
+                    <!-- Tokens de jugadores -->
+                    <div id="tokens-container">
+                        {% for t in tokens %}
+                        {% if t.is_visible %}
+                        <div class="token {% if t.character_id == my_character_id %}me{% endif %}" style="
+                                left: {{ t.x * current_section.tile_size + current_section.tile_size/2 }}px;
+                                top: {{ t.y * current_section.tile_size + current_section.tile_size/2 }}px;
+                                width: {{ t.size_x * current_section.tile_size }}px;
+                                height: {{ t.size_y * current_section.tile_size }}px;
+                            " data-token-id="{{ t.id }}" data-character-id="{{ t.character_id }}"
+                            data-owner-id="{{ t.owner_user_id }}" data-name="{{ t.label }}"
+                            data-level="{{ t.level or 1 }}" data-class="{{ t.class_name or 'Aventurero' }}"
+                            data-hp="{{ t.current or 0 }}" data-max-hp="{{ t.max_hp or 0 }}"
+                            data-ac="{{ t.ac or 10 }}">
+
+                            <img src="{{ url_for('static', filename=t.token_texture.lstrip('/')) }}" alt="{{ t.label }}"
+                                draggable="false" style="width: 100%; height: 100%; object-fit: contain;">
+
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+
+                </div>
+
+                <!-- Token Preview (fuera del map-container para evitar transformaciones) -->
+                <div id="token-preview" class="preview" style="display: none;"></div>
+
+                <!-- Controles del mapa -->
+                <div class="map-controls">
+                    <button class="map-control-btn" onclick="resetMapView()" title="Reset View">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </button>
+                    <button class="map-control-btn" onclick="toggleGrid()" title="Toggle Grid">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Info del mapa -->
+                <div class="map-info">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <svg class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <strong>{{ current_scene.name }}</strong>
+                    </div>
+                    <div style="margin-top: 6px; font-size: 11px; opacity: 0.6;">
+                        Grid: {{ current_section.tile_size }}px ·
+                        {{ current_section.width_px // current_section.tile_size }}×{{ current_section.height_px //
+                        current_section.tile_size }} tiles
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHAT WIDGET (fuera del map-viewport pero superpuesto) -->
+            <div class="chat-widget">
+                <!-- Chat colapsado -->
+                <div class="chat-collapsed" id="chat-collapsed">
+                    <input type="text" class="chat-input-collapsed" id="chat-trigger"
+                        placeholder="💬 Presiona T o Enter para chatear..." readonly onclick="openChat()">
+                    <div class="chat-badge" id="chat-badge" style="display: none;">0</div>
+                </div>
+
+                <!-- Chat expandido -->
+                <div class="chat-expanded" id="chat-expanded" style="display: none;">
+                    <div class="chat-header">
+                        <div class="chat-title">💬 Chat</div>
+                        <button class="chat-close" onclick="closeChat()">✕</button>
+                    </div>
+
+                    <div class="chat-messages" id="chat-messages"></div>
+
+                    <form class="chat-input-form" id="chat-form">
+                        <input type="text" class="chat-input-expanded" id="chat-input"
+                            placeholder="Escribe un mensaje..." autocomplete="off">
+                        <button type="submit" class="chat-send-btn">Enviar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL DERECHO (Character Sheet) -->
+        {% if not is_dm %}
+        <aside class="side-panel">
+            <div class="tab-buttons">
+                <button onclick="openTab('info')" class="tab-btn active" id="tab-btn-info">Info</button>
+                <button onclick="openTab('gear')" class="tab-btn" id="tab-btn-gear">Equipo</button>
+                <button onclick="openTab('features')" class="tab-btn" id="tab-btn-features">Habilidades</button>
+            </div>
+
+            <!-- TAB: Info -->
+            <div id="tab-info" class="tab">
+                <h3 id="char-name"
+                    class="text-3xl font-bold mb-2 bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                </h3>
+                <p id="char-meta" class="text-sm text-slate-400 mb-6 font-medium"></p>
+
+                <div class="section-title">HP & Recursos</div>
+                <div class="hp-ac-grid">
+                    <div class="hp-item">
+                        <div class="stat-label">Puntos de Vida</div>
+                        <div id="char-hp" class="text-2xl font-bold text-green-400" style="margin-top: 8px;">--/--</div>
+                    </div>
+                    <div class="ac-item">
+                        <div class="stat-label">Clase de Armadura</div>
+                        <div id="char-ac" class="text-2xl font-bold text-blue-400" style="margin-top: 8px;">--</div>
+                    </div>
+                </div>
+
+                <div class="section-title">Atributos</div>
+                <div id="stats" class="stat-grid"></div>
+            </div>
+
+            <!-- TAB: Gear -->
+            <div id="tab-gear" class="tab" style="display: none;">
+                <div class="section-title">Equipo Equipado</div>
+                <ul id="gear-list" class="feature-list"></ul>
+            </div>
+
+            <!-- TAB: Features -->
+            <div id="tab-features" class="tab" style="display: none;">
+                <div class="section-title">Habilidades de Clase</div>
+                <ul id="features-list" class="feature-list"></ul>
+            </div>
+        </aside>
+        {% endif %}
+        {% if is_dm %}
+        <aside class="dm-panel">
+
+            <div class="tab-buttons">
+                <button onclick="openDMTab('map')" class="tab-btn active" id="dm-tab-btn-map">Mapa</button>
+                <button onclick="openDMTab('entities')" class="tab-btn" id="dm-tab-btn-entities">Entidades</button>
+                <button onclick="openDMTab('combat')" class="tab-btn" id="dm-tab-btn-combat">Combate</button>
+            </div>
+
+            <!-- MAPA -->
+            <div id="dm-tab-map" class="tab">
+                <div class="section-title">Mapa</div>
+                <p style="opacity:.6">Sin herramientas todavía.</p>
+            </div>
+
+            <!-- ENTIDADES -->
+            <div id="dm-tab-entities" class="tab" style="display:none;">
+
+                <div class="section-title">Jugadores</div>
+                <ul id="dm-player-list" class="feature-list"></ul>
+
+                <div class="section-title" style="margin-top:20px;">Enemigos</div>
+                <ul id="dm-enemy-list" class="feature-list"></ul>
+
+                <div class="section-title" style="margin-top:20px;">Crear Enemigo</div>
+
+                <div class="dm-form">
+                    <input type="text" id="enemy-name" placeholder="Nombre">
+                    <input type="number" id="enemy-hp" placeholder="HP">
+                    <input type="number" id="enemy-max-hp" placeholder="Max HP">
+                    <input type="file" id="enemy-asset" accept="image/*">
+                    <select id="enemy-size">
+                        <option value="1x1">1x1</option>
+                        <option value="1x2">1x2</option>
+                        <option value="2x2">2x2</option>
+                        <option value="3x3">3x3</option>
+                    </select>
+                    <button onclick="createEnemy()">Crear y Añadir al Mapa</button>
+                </div>
+
+            </div>
+
+            <!-- COMBATE -->
+            <div id="dm-tab-combat" class="tab" style="display:none;">
+                <div class="section-title">Combate</div>
+                <p style="opacity:.6">Sistema de iniciativa pendiente.</p>
+            </div>
+
+        </aside>
+        {% endif %}
+
+    </div>
+
+    <script>
+        // BACKEND TO FRONTEND VARIABLES
+
+        const isDM = {{ 'true' if is_dm else 'false' }};
+        const myCharacterId = "{{ my_character_id }}";
+        const campaignCode = "{{ code }}";
+        const MAP_WIDTH = {{ current_section.width_px }};
+        const MAP_HEIGHT = {{ current_section.height_px }};
+        const TILE_SIZE = {{ current_section.tile_size }};
+        const current_section_offset_x = {{ current_section.offset_x }};
+        const current_section_offset_y = {{ current_section.offset_y }};
+        const mapImage = new Image();
+        {% set filename = current_scene.map_url.replace('/uploads', 'uploads') %}
+        mapImage.src = "{{ url_for('serve_storage', filename=filename) }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+</body>
+
+</html>

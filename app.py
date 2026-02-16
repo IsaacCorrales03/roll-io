@@ -7,19 +7,19 @@ import time
 from flask_socketio import SocketIO
 
 # HTTP routes
-from http_app import create_app
+from src.interfaces.http.http_app import create_app
 
 # Socket handlers
-from socket_app import register_socket_handlers
+from src.interfaces.websocket.socket_app import register_socket_handlers
 
 # Services
-from services.auth_service import AuthService
-from services.db_service import create_db_service
-from auth.infrastructure.user_repository import MySQLUserRepository
-from auth.infrastructure.auth_session_repository import MySQLAuthSessionRepository
-from auth.infrastructure.bcrypt_hasher import BcryptPasswordHasher
-from campaigns.infrastructure.mysql_campaign_repository import MySQLCampaignRepository
-from services.character_repository import CharacterRepository
+from src.features.auth.application.auth_service import AuthService
+from src.shared.database.db_service import create_db_service
+from src.features.auth.infrastructure.user_repository import MySQLUserRepository
+from src.features.auth.infrastructure.auth_session_repository import MySQLAuthSessionRepository
+from src.features.auth.infrastructure.bcrypt_hasher import BcryptPasswordHasher
+from src.features.campaigns.infrastructure.mysql_campaign_repository import MySQLCampaignRepository
+from src.features.characters.infrastructure.character_repository import CharacterRepository
 
 
 # ==========================
