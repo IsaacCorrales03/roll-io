@@ -1,0 +1,163 @@
+/* Tab Styles */
+.tab-button {
+    position: relative;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-button.active {
+    color: rgb(251, 191, 36);
+    border-bottom-color: rgb(251, 191, 36);
+    background: rgba(251, 191, 36, 0.05);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Selection buttons */
+.selection-option {
+    padding: 0.75rem 1rem;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(71, 85, 105, 0.5);
+    border-radius: 0.75rem;
+    color: rgb(203, 213, 225);
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.selection-option:hover {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(251, 191, 36, 0.5);
+    color: rgb(251, 191, 36);
+    transform: translateY(-2px);
+}
+
+.selection-option.active {
+    background: linear-gradient(to right, rgba(217, 119, 6, 0.2), rgba(180, 83, 9, 0.2));
+    border-color: rgba(251, 191, 36, 0.5);
+    color: rgb(251, 191, 36);
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(251, 191, 36, 0.3);
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(251, 191, 36, 0.5);
+}
+
+/* Race/Class info styles */
+.race-name,
+.class-name {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: rgb(251, 191, 36);
+    margin-bottom: 1rem;
+    font-family: 'Cinzel', serif;
+}
+
+.description {
+    color: rgb(203, 213, 225);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    font-style: italic;
+}
+
+.stats-container {
+    margin: 2rem 0;
+    display: flex;
+    justify-content: center;
+}
+
+.stats-container canvas {
+    max-width: 100%;
+    height: auto !important;
+}
+
+.trait-item {
+    background: rgba(30, 41, 59, 0.3);
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.trait-title {
+    color: rgb(251, 191, 36);
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.trait-description {
+    color: rgb(203, 213, 225);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.hit-die {
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: rgb(192, 132, 252);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.feature-level {
+    margin-bottom: 1.5rem;
+}
+
+.level-header {
+    background: linear-gradient(to right, rgba(168, 85, 247, 0.2), rgba(192, 132, 252, 0.2));
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 0.75rem;
+    padding: 0.5rem 1rem;
+    color: rgb(192, 132, 252);
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    font-family: 'Cinzel', serif;
+}
+
+.traits-list h4,
+.class-features h4 {
+    color: rgb(251, 191, 36);
+    font-weight: 700;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-family: 'Cinzel', serif;
+}

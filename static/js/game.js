@@ -70,6 +70,50 @@ window.onload = () => {
         document.getElementById('char-ac').textContent = data.value || '--';
 
     });
+    socket.on("enemy_created", (data) => {
+
+    // Evitar duplicados
+    if (document.querySelector(`[data-token-id="${data.id}"]`)) {
+        return;
+    }
+
+    const token = document.createElement("div");
+    token.className = "token enemy";
+
+    token.dataset.tokenId = data.id;
+    token.dataset.name = data.name;
+    token.dataset.hp = data.hp;
+    token.dataset.maxHp = data.max_hp;
+    token.dataset.ac = data.ac || 10;
+    token.dataset.gridX = data.x;
+    token.dataset.gridY = data.y;
+
+    // Posición centrada como usas en tu sistema
+    token.style.left = `${data.x * TILE_SIZE + TILE_SIZE / 2}px`;
+    token.style.top = `${data.y * TILE_SIZE + TILE_SIZE / 2}px`;
+    token.style.width = `${data.size_x * TILE_SIZE}px`;
+    token.style.height = `${data.size_y * TILE_SIZE}px`;
+
+    token.innerHTML = `
+        <img src="${data.asset}"
+             draggable="false"
+             style="width:100%; height:100%; object-fit:contain;">
+    `;
+
+    document.getElementById("tokens-container").appendChild(token);
+
+    // Actualizar grid lógico
+    if (typeof updateGridState === "function") {
+        updateGridState(data.id, null, null, data.x, data.y);
+    }
+
+    // Si eres DM, refrescar lista
+    if (isDM && typeof renderDMEnemies === "function") {
+        renderDMEnemies();
+    }
+
+    console.log("🧟 Enemigo creado:", data.name);
+});
 
 
     // Inicializar el resto de la UI
@@ -475,9 +519,6 @@ function initializeGrid() {
             };
         }
     });
-
-    console.log(`📊 Grid inicializado: ${GRID_COLS}x${GRID_ROWS} casillas`);
-    console.log('📍 Tokens registrados:', gridState.flat().filter(c => c !== null).length);
 }
 
 function isValidGridPosition(x, y) {
@@ -504,16 +545,84 @@ function updateGridState(tokenId, oldX, oldY, newX, newY) {
         };
     }
 
-    console.log(`🔄 Grid actualizado: [${oldX},${oldY}] → [${newX},${newY}]`);
+}
+async function createEnemy() {
+    const name = document.getElementById('enemy-name').value.trim();
+    const hp = parseInt(document.getElementById('enemy-hp').value);
+    const maxHp = parseInt(document.getElementById('enemy-max-hp').value);
+    const fileInput = document.getElementById('enemy-asset');
+    const size = document.getElementById('enemy-size').value;
+
+    if (!name || !hp || !maxHp || !fileInput.files.length) {
+        console.warn("Datos incompletos");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        const uploadRes = await fetch("/api/enemies/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        const uploadData = await uploadRes.json();
+
+        if (!uploadData.success) {
+            console.error("Upload falló");
+            return;
+        }
+
+        const [sizeX, sizeY] = size.split('x').map(Number);
+
+        socket.emit("create_enemy", {
+            campaign_code: campaignCode,
+            name: name,
+            hp: hp,
+            max_hp: maxHp,
+            asset: uploadData.asset_url,
+            size_x: sizeX,
+            size_y: sizeY
+        });
+
+        // Limpieza opcional de formulario
+        document.getElementById('enemy-name').value = "";
+        document.getElementById('enemy-hp').value = "";
+        document.getElementById('enemy-max-hp').value = "";
+        document.getElementById('enemy-asset').value = "";
+
+    } catch (err) {
+        console.error("Error en upload:", err);
+    }
 }
 
 /* ================================
    DM TOKEN MOVE SYSTEM (MEJORADO)
 ================================ */
+function renderDMPlayers() {
+    const list = document.getElementById('dm-player-list');
+    list.innerHTML = '';
+
+    document.querySelectorAll('.token.me, .token[data-character-id]')
+        .forEach(token => {
+            const li = document.createElement('li');
+            li.className = 'feature-item';
+            li.innerHTML = `
+                <div class="feature-name">${token.dataset.name}</div>
+                <div class="feature-desc">
+                    ❤️ ${token.dataset.hp}/${token.dataset.maxHp}
+                </div>
+            `;
+            list.appendChild(li);
+        });
+}
 
 let selectedToken = null;
 
 if (isDM) {
+    renderDMPlayers();
     // Click en token → seleccionar
     document.addEventListener('click', (e) => {
         const token = e.target.closest('.token');
@@ -529,8 +638,6 @@ if (isDM) {
             selectedToken = token;
             token.classList.add('selected');
             
-            console.log('🎯 Token seleccionado:', token.dataset.name, 
-                       `[${token.dataset.gridX},${token.dataset.gridY}]`);
             return;
         }
 
@@ -562,12 +669,6 @@ if (isDM) {
         const tileX = Math.floor(canvasX / TILE_SIZE);
         const tileY = Math.floor(canvasY / TILE_SIZE);
 
-        console.log('🖱️ Click detectado:', {
-            viewport: `[${Math.round(viewportX)}, ${Math.round(viewportY)}]`,
-            canvas: `[${Math.round(canvasX)}, ${Math.round(canvasY)}]`,
-            grid: `[${tileX}, ${tileY}]`,
-            scale: mapScale.toFixed(2)
-        });
 
         // Validar posición
         if (!isValidGridPosition(tileX, tileY)) {
@@ -584,8 +685,6 @@ if (isDM) {
         // Obtener posición anterior
         const oldX = parseInt(selectedToken.dataset.gridX || 0);
         const oldY = parseInt(selectedToken.dataset.gridY || 0);
-
-        console.log(`✅ Moviendo "${selectedToken.dataset.name}" de [${oldX},${oldY}] → [${tileX},${tileY}]`);
 
         // Actualizar grid state
         updateGridState(selectedToken.dataset.tokenId, oldX, oldY, tileX, tileY);
@@ -644,4 +743,15 @@ if (isDM) {
         selectedToken.classList.remove('selected');
         selectedToken = null;
     });
+}
+function openDMTab(name) {
+    document.querySelectorAll('#dm-tab-map, #dm-tab-entities, #dm-tab-combat')
+        .forEach(t => t.style.display = 'none');
+
+    document.getElementById(`dm-tab-${name}`).style.display = 'block';
+
+    document.querySelectorAll('#dm-tab-btn-map, #dm-tab-btn-entities, #dm-tab-btn-combat')
+        .forEach(b => b.classList.remove('active'));
+
+    document.getElementById(`dm-tab-btn-${name}`).classList.add('active');
 }

@@ -169,6 +169,56 @@
             </div>
         </aside>
         {% endif %}
+        {% if is_dm %}
+        <aside class="dm-panel">
+
+            <div class="tab-buttons">
+                <button onclick="openDMTab('map')" class="tab-btn active" id="dm-tab-btn-map">Mapa</button>
+                <button onclick="openDMTab('entities')" class="tab-btn" id="dm-tab-btn-entities">Entidades</button>
+                <button onclick="openDMTab('combat')" class="tab-btn" id="dm-tab-btn-combat">Combate</button>
+            </div>
+
+            <!-- MAPA -->
+            <div id="dm-tab-map" class="tab">
+                <div class="section-title">Mapa</div>
+                <p style="opacity:.6">Sin herramientas todavía.</p>
+            </div>
+
+            <!-- ENTIDADES -->
+            <div id="dm-tab-entities" class="tab" style="display:none;">
+
+                <div class="section-title">Jugadores</div>
+                <ul id="dm-player-list" class="feature-list"></ul>
+
+                <div class="section-title" style="margin-top:20px;">Enemigos</div>
+                <ul id="dm-enemy-list" class="feature-list"></ul>
+
+                <div class="section-title" style="margin-top:20px;">Crear Enemigo</div>
+
+                <div class="dm-form">
+                    <input type="text" id="enemy-name" placeholder="Nombre">
+                    <input type="number" id="enemy-hp" placeholder="HP">
+                    <input type="number" id="enemy-max-hp" placeholder="Max HP">
+                    <input type="file" id="enemy-asset" accept="image/*">
+                    <select id="enemy-size">
+                        <option value="1x1">1x1</option>
+                        <option value="1x2">1x2</option>
+                        <option value="2x2">2x2</option>
+                        <option value="3x3">3x3</option>
+                    </select>
+                    <button onclick="createEnemy()">Crear y Añadir al Mapa</button>
+                </div>
+
+            </div>
+
+            <!-- COMBATE -->
+            <div id="dm-tab-combat" class="tab" style="display:none;">
+                <div class="section-title">Combate</div>
+                <p style="opacity:.6">Sistema de iniciativa pendiente.</p>
+            </div>
+
+        </aside>
+        {% endif %}
 
     </div>
 
