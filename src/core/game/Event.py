@@ -5,6 +5,7 @@ from uuid import uuid4, UUID
 from typing import Optional, Dict, Any
 from abc import ABC, abstractmethod
 
+from src.core.character.enemy import Enemy
 from src.core.base import Actor
 from src.core.game.query import Query, QueryHandler
 
@@ -70,6 +71,7 @@ class GameState:
     
     characters: Dict[UUID, "Actor"] = field(default_factory=dict)
     tokens: Dict[UUID, dict] = field(default_factory=dict)
+    enemies: Dict[UUID, "Enemy"] = field(default_factory=dict)
     # NUEVO: recursos por actor
     resources: dict[UUID, dict[str, int]] = field(default_factory=dict)
     # Flujo global

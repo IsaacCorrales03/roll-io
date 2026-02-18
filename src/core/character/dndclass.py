@@ -185,7 +185,7 @@ class Monk(DnDClass):
         return 10 + actor.dex_mod + actor.wis_mod
 
 class Paladin(DnDClass):
-    name = "Paladín"
+    name = "Paladin"
     definition = (
         "Guerreros sagrados ligados por juramentos divinos."
     )

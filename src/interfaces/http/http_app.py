@@ -304,7 +304,6 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
 
         campaign_id = campaigns_dict[code]["campaign_id"]
         characters = character_repo.get_by_owner(str(user.id))
-        print("Characters for user:", characters)
         return render_template(
             "lobby.html",
             code=code,
@@ -315,7 +314,7 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
 
     @app.route("/game")
     def game():
-        from src.interfaces.http.game_state_builder import build_game_state
+        from src.shared.utils.game_state_builder import build_game_state
         
         code = request.args.get("code")
         if not code or code not in campaigns_dict:
@@ -413,28 +412,7 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
             clean_filename = clean_filename[8:]  # Remover "uploads/"
         
         full_path = os.path.join(storage_dir, clean_filename)
-        
-        # Debug temporal
-        print(f"📥 Recibido: {filename}")
-        print(f"🧹 Limpio: {clean_filename}")
-        print(f"📂 Storage dir: {storage_dir}")
-        print(f"📄 Ruta completa: {full_path}")
-        print(f"✅ ¿Existe?: {os.path.exists(full_path)}")
-        
-        # Si no existe, mostrar qué archivos SÍ hay
-        if not os.path.exists(full_path):
-            try:
-                dir_to_check = os.path.dirname(full_path)
-                if os.path.exists(dir_to_check):
-                    files = os.listdir(dir_to_check)
-                    print(f"📋 Archivos en {dir_to_check}:")
-                    for f in files[:10]:  # Mostrar max 10
-                        print(f"   - {f}")
-                else:
-                    print(f"❌ El directorio no existe: {dir_to_check}")
-            except Exception as e:
-                print(f"⚠️ Error listando: {e}")
-            abort(404)
-        
+    
+
         return send_from_directory(storage_dir, clean_filename)
     return app

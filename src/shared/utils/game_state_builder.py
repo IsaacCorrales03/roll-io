@@ -1,8 +1,6 @@
 from src.core.game.Event import EventDispatcher, GameState
 from src.core.game.EventHandlers import *
-from src.core.game.querys import GetArmorClass, GetStatModifier
-from src.core.game.querys import GetArmorClassHandler
-from src.core.game.querys import GetStatModifierHandler
+from src.core.game.querys import *
 from src.features.characters.application.character_mapper import json_to_character
 
 
@@ -40,7 +38,8 @@ def build_game_state(campaign_code: str, campaigns, character_repository) -> Gam
     dispatcher.register("status_requested", ApplyStatusHandler())
     dispatcher.register("attack_hit", RageDamageHandler())
     dispatcher.register("token_moved", TokenMovedHandler())
+    dispatcher.register("create_enemy", CreateEnemyHandler())
     state.register_query_handler(GetArmorClass, GetArmorClassHandler())
     state.register_query_handler(GetStatModifier, GetStatModifierHandler())
-
+    state.register_query_handler(GetEntities, GetEntitiesHandler())
     return state

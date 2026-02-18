@@ -42,3 +42,23 @@ class Token:
             "is_visible": self.is_visible,
             "label": self.label,
         }
+class EnemyToken(Token):
+    def __init__(
+        self,
+        id: UUID,
+        enemy_id: UUID,
+        x: int,
+        y: int,
+        size: Tuple[int, int] = (1, 1),
+        texture_url: str | None = None,
+        fallback_color: str = "#ff0000",
+    ):
+        super().__init__(
+            id=id,
+            actor_id=enemy_id,
+            x=x,
+            y=y,
+            size=size,
+            texture_url=texture_url,
+            fallback_color=fallback_color
+        )

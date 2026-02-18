@@ -8,8 +8,8 @@ from flask import request
 from flask_socketio import emit, join_room
 
 # Models and queries
-from src.core.game.Event import MoveTokenEvent
-from src.core.game.querys import GetArmorClass
+from src.core.game.Event import MoveTokenEvent, Event
+from src.core.game.querys import GetArmorClass, GetEntities
 
 # Services
 from src.features.auth.application.auth_service import AuthService
@@ -43,7 +43,7 @@ def register_socket_handlers(
 
     def get_game_state(campaign_code: str):
         """Helper to get or create game state"""
-        from src.interfaces.http.game_state_builder import build_game_state
+        from src.shared.utils.game_state_builder import build_game_state
         
         if campaign_code not in game_states_dict:
             game_states_dict[campaign_code] = build_game_state(
@@ -239,7 +239,6 @@ def register_socket_handlers(
         token_id = data["token_id"]
         x = data["x"]
         y = data["y"]
-
         state = game_states_dict[campaign_code]
         event = MoveTokenEvent(token_id=token_id, x=x, y=y)  # type: ignore
         try:
@@ -255,20 +254,84 @@ def register_socket_handlers(
             traceback.print_exc()
             emit("error", {"message": str(e)})
 
+    @socketio.on("get_entities")
+    def handle_get_entities(data): 
+        campaign_code = socket_campaigns_dict.get(request.sid)  # type: ignore
+        if not campaign_code:
+            emit("error", {"message": "Campaign not found"})
+            return
+
+        state = get_game_state(campaign_code)
+
+        try:
+            result = state.query(GetEntities())
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            emit("error", {"message": str(e)})
+            return
+        print(result)
+        characters = [
+            {
+                "id": str(char.id),
+                "name": char.name,
+                "hp": char.hp,
+                "max_hp": char.max_hp,
+                "ac": char.calc_ac(),
+            }
+            for char in result.get("characters", [])
+        ]
+
+        enemies = [
+            {
+                "id": str(enemy.id),
+                "name": enemy.name,
+                "hp": enemy.hp,
+                "max_hp": enemy.max_hp,
+                "ac": enemy.ac,
+            }
+            for enemy in result.get("enemies", [])
+        ]
+
+        emit("entities_result", {
+            "characters": characters,
+            "enemies": enemies
+        })
+
     @socketio.on("create_enemy")
     def handle_create_enemy(data):
         token_id = str(uuid4())
         spawn_x = 0
         spawn_y = 0
-
+        event = Event(
+            type="create_enemy",
+            payload={
+                "id": token_id,
+                "name": data["name"],
+                "hp": data["hp"],
+                "max_hp": data["max_hp"],
+                "ac": data["ac"],
+                "asset_url": data["asset"],
+                "size": data["size"],
+            },
+            cancelable=False
+        )
+        state = game_states_dict[data["campaign_code"]]
+        try:
+            state.dispatch(event)
+        except Exception as e:  
+            import traceback
+            traceback.print_exc()
+            emit("error", {"message": str(e)})
+            return
+        
         socketio.emit("enemy_created", {
             "id": token_id,
             "name": data["name"],
             "hp": data["hp"],
             "max_hp": data["max_hp"],
             "asset": data["asset"],
-            "size_x": data["size_x"],
-            "size_y": data["size_y"],
+            "size": data["size"],
             "x": spawn_x,
             "y": spawn_y
         }, to=data["campaign_code"])

@@ -50,7 +50,7 @@ window.onload = () => {
         // Actualizar grid state
         const oldX = parseInt(token.dataset.gridX || 0);
         const oldY = parseInt(token.dataset.gridY || 0);
-        
+
         if (typeof updateGridState === 'function') {
             updateGridState(d.token_id, oldX, oldY, d.x, d.y);
         }
@@ -64,6 +64,10 @@ window.onload = () => {
         console.error('❌ Error del servidor:', d);
     });
 
+    socket.on('entities_result', data => {
+        console.log("Entities data:", data);
+        renderDMEntities(data);
+    });
 
     socket.on("ac_result", (data) => {
         console.log("AC:", data.value);
@@ -72,48 +76,48 @@ window.onload = () => {
     });
     socket.on("enemy_created", (data) => {
 
-    // Evitar duplicados
-    if (document.querySelector(`[data-token-id="${data.id}"]`)) {
-        return;
-    }
+        // Evitar duplicados
+        if (document.querySelector(`[data-token-id="${data.id}"]`)) {
+            return;
+        }
 
-    const token = document.createElement("div");
-    token.className = "token enemy";
+        const token = document.createElement("div");
+        token.className = "token enemy";
 
-    token.dataset.tokenId = data.id;
-    token.dataset.name = data.name;
-    token.dataset.hp = data.hp;
-    token.dataset.maxHp = data.max_hp;
-    token.dataset.ac = data.ac || 10;
-    token.dataset.gridX = data.x;
-    token.dataset.gridY = data.y;
+        token.dataset.tokenId = data.id;
+        token.dataset.name = data.name;
+        token.dataset.hp = data.hp;
+        token.dataset.maxHp = data.max_hp;
+        token.dataset.ac = data.ac || 10;
+        token.dataset.gridX = data.x;
+        token.dataset.gridY = data.y;
 
-    // Posición centrada como usas en tu sistema
-    token.style.left = `${data.x * TILE_SIZE + TILE_SIZE / 2}px`;
-    token.style.top = `${data.y * TILE_SIZE + TILE_SIZE / 2}px`;
-    token.style.width = `${data.size_x * TILE_SIZE}px`;
-    token.style.height = `${data.size_y * TILE_SIZE}px`;
+        // Posición centrada como usas en tu sistema
+        token.style.left = `${data.x * TILE_SIZE + TILE_SIZE / 2}px`;
+        token.style.top = `${data.y * TILE_SIZE + TILE_SIZE / 2}px`;
+        token.style.width = `${data.size[0] * TILE_SIZE}px`;
+        token.style.height = `${data.size[1] * TILE_SIZE}px`;
 
-    token.innerHTML = `
-        <img src="/storage${data.asset}"
+        token.innerHTML = `
+        <img src="${data.asset}"
              draggable="false"
              style="width:100%; height:100%; object-fit:contain;">
     `;
 
-    document.getElementById("tokens-container").appendChild(token);
+        document.getElementById("tokens-container").appendChild(token);
 
-    // Actualizar grid lógico
-    if (typeof updateGridState === "function") {
-        updateGridState(data.id, null, null, data.x, data.y);
-    }
+        // Actualizar grid lógico
+        if (typeof updateGridState === "function") {
+            updateGridState(data.id, null, null, data.x, data.y);
+        }
 
-    // Si eres DM, refrescar lista
-    if (isDM && typeof renderDMEnemies === "function") {
-        renderDMEnemies();
-    }
+        // Si eres DM, refrescar lista
+        if (isDM) {
+            socket.emit("get_entities", { campaign_code: campaignCode });
+        }
 
-    console.log("🧟 Enemigo creado:", data.name);
-});
+        console.log("🧟 Enemigo creado:", data.name);
+    });
 
 
     // Inicializar el resto de la UI
@@ -160,7 +164,8 @@ function initializeGame() {
 
     // Inicializar grid después de un pequeño delay para que los tokens estén cargados
     if (isDM) {
-        setTimeout(initializeGrid, 500);
+        socket.emit("get_entities", { campaign_code: campaignCode });
+        initializeGrid();
     }
 }
 
@@ -511,7 +516,7 @@ function initializeGrid() {
     document.querySelectorAll('.token').forEach(token => {
         const x = parseInt(token.dataset.gridX || 0);
         const y = parseInt(token.dataset.gridY || 0);
-        
+
         if (isValidGridPosition(x, y)) {
             gridState[y][x] = {
                 tokenId: token.dataset.tokenId,
@@ -532,10 +537,9 @@ function isCellOccupied(x, y) {
 
 function updateGridState(tokenId, oldX, oldY, newX, newY) {
     // Limpiar posición anterior
-    if (isValidGridPosition(oldX, oldY)) {
+    if (gridState[oldY] && gridState[oldY][oldX]) {
         gridState[oldY][oldX] = null;
     }
-
     // Ocupar nueva posición
     if (isValidGridPosition(newX, newY)) {
         const token = document.querySelector(`[data-token-id="${tokenId}"]`);
@@ -552,7 +556,7 @@ async function createEnemy() {
     const maxHp = parseInt(document.getElementById('enemy-max-hp').value);
     const fileInput = document.getElementById('enemy-asset');
     const size = document.getElementById('enemy-size').value;
-
+    const ac = parseInt(document.getElementById('enemy-ac').value) || 10;
     if (!name || !hp || !maxHp || !fileInput.files.length) {
         console.warn("Datos incompletos");
         return;
@@ -575,16 +579,16 @@ async function createEnemy() {
             return;
         }
 
-        const [sizeX, sizeY] = size.split('x').map(Number);
+        size_map = size.split('x').map(Number);
 
         socket.emit("create_enemy", {
             campaign_code: campaignCode,
             name: name,
             hp: hp,
+            ac: ac,
             max_hp: maxHp,
             asset: uploadData.asset_url,
-            size_x: sizeX,
-            size_y: sizeY
+            size: size_map,
         });
 
         // Limpieza opcional de formulario
@@ -601,32 +605,68 @@ async function createEnemy() {
 /* ================================
    DM TOKEN MOVE SYSTEM (MEJORADO)
 ================================ */
-function renderDMPlayers() {
-    const list = document.getElementById('dm-player-list');
-    list.innerHTML = '';
 
-    document.querySelectorAll('.token.me, .token[data-character-id]')
-        .forEach(token => {
-            const li = document.createElement('li');
-            li.className = 'feature-item';
-            li.innerHTML = `
-                <div class="feature-name">${token.dataset.name}</div>
-                <div class="feature-desc">
-                    ❤️ ${token.dataset.hp}/${token.dataset.maxHp}
-                </div>
-            `;
-            list.appendChild(li);
-        });
+function renderDMEntities(data) {
+    const playerList = document.getElementById('dm-player-list');
+    const enemyList = document.getElementById('dm-enemy-list');
+
+    // Render jugadores
+    playerList.innerHTML = '';
+    data.characters.forEach(char => {
+        const hpPercent = Math.round((char.hp / char.max_hp) * 100);
+        const hpColor = hpPercent > 50 ? '#4caf50' : hpPercent > 25 ? '#ff9800' : '#f44336';
+
+        const li = document.createElement('li');
+        li.className = 'feature-item';
+        li.innerHTML = `
+            <div class="entity-header">
+                <span class="entity-name">${char.name}</span>
+                <span class="entity-ac">🛡️ ${char.ac}</span>
+            </div>
+            <div class="entity-hp-bar-bg">
+                <div class="entity-hp-bar" style="width:${hpPercent}%; background:${hpColor};"></div>
+            </div>
+            <div class="entity-hp-text">${char.hp} / ${char.max_hp} HP</div>
+        `;
+        playerList.appendChild(li);
+    });
+
+    if (data.characters.length === 0) {
+        playerList.innerHTML = '<li class="feature-item" style="color:#888;">Sin jugadores conectados</li>';
+    }
+
+    // Render enemigos
+    enemyList.innerHTML = '';
+    data.enemies.forEach(enemy => {
+        const hpPercent = Math.round((enemy.hp / enemy.max_hp) * 100);
+        const hpColor = hpPercent > 50 ? '#4caf50' : hpPercent > 25 ? '#ff9800' : '#f44336';
+
+        const li = document.createElement('li');
+        li.className = 'feature-item';
+        li.innerHTML = `
+            <div class="entity-header">
+                <span class="entity-name">${enemy.name}</span>
+                <span class="entity-ac">🛡️ ${enemy.ac}</span>
+            </div>
+            <div class="entity-hp-bar-bg">
+                <div class="entity-hp-bar" style="width:${hpPercent}%; background:${hpColor};"></div>
+            </div>
+            <div class="entity-hp-text">${enemy.hp} / ${enemy.max_hp} HP</div>
+        `;
+        enemyList.appendChild(li);
+    });
+
+    if (data.enemies.length === 0) {
+        enemyList.innerHTML = '<li class="feature-item" style="color:#888;">Sin enemigos creados</li>';
+    }
 }
 
-let selectedToken = null;
-
 if (isDM) {
-    renderDMPlayers();
+    
     // Click en token → seleccionar
     document.addEventListener('click', (e) => {
         const token = e.target.closest('.token');
-        
+
         if (token) {
             e.stopPropagation();
 
@@ -637,7 +677,7 @@ if (isDM) {
 
             selectedToken = token;
             token.classList.add('selected');
-            
+
             return;
         }
 
@@ -655,7 +695,7 @@ if (isDM) {
 
         // Obtener coordenadas CORRECTAS considerando scroll y zoom
         const rect = gridCanvas.getBoundingClientRect();
-        
+
         // Posición del click en el viewport
         const viewportX = e.clientX - rect.left;
         const viewportY = e.clientY - rect.top;
@@ -694,6 +734,9 @@ if (isDM) {
         selectedToken.dataset.gridY = tileY;
 
         // Emitir al servidor
+        console.log(`Moviendo token ${selectedToken.dataset.id} a (${tileX}, ${tileY})`);
+        console.log(selectedToken.dataset.tokenId)
+
         socket.emit("move_token", {
             campaign_code: campaignCode,
             token_id: selectedToken.dataset.tokenId,

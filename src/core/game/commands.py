@@ -42,3 +42,12 @@ class StatusCommand:
         self.target_id = target_id     # quien recibe el estado
         self.status = status           # el nombre del estado
         self.duration_turns = duration_turns
+
+class CreateEnemyCommand:
+    def __init__(self, name: str, hp: int, max_hp: int, ac: int, asset_url: str, size=(1, 1)):
+        self.name = name
+        self.max_hp = max_hp
+        self.hp = hp
+        self.ac = ac
+        self.asset_url = asset_url  
+        self.size = size

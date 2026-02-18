@@ -737,3 +737,169 @@ body {
 .token.selected {
     outline: 2px solid red;
 }
+/* ================================
+   DM TAB - ENTITIES
+================================ */
+
+/* Listas de jugadores y enemigos */
+#dm-player-list,
+#dm-enemy-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#dm-player-list li,
+#dm-enemy-list li {
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.06) 0%, rgba(99, 102, 241, 0.06) 100%);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 10px;
+    color: #cbd5e1;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(6px);
+    cursor: default;
+}
+
+#dm-player-list li:hover,
+#dm-enemy-list li:hover {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.14) 0%, rgba(99, 102, 241, 0.14) 100%);
+    border-color: rgba(167, 139, 250, 0.45);
+    color: #e2e8f0;
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.18);
+}
+
+/* Distinguir enemigos con borde rojo tenue */
+#dm-enemy-list li {
+    border-left: 3px solid rgba(239, 68, 68, 0.5);
+}
+
+#dm-enemy-list li:hover {
+    border-left-color: rgba(239, 68, 68, 0.8);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
+/* ================================
+   DM FORM
+================================ */
+
+.dm-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dm-form input[type="text"],
+.dm-form input[type="number"],
+.dm-form select {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(167, 139, 250, 0.25);
+    border-radius: 9px;
+    padding: 11px 14px;
+    color: #e2e8f0;
+    font-size: 13px;
+    transition: all 0.25s ease;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.dm-form input[type="text"]::placeholder,
+.dm-form input[type="number"]::placeholder {
+    color: #475569;
+}
+
+.dm-form input[type="text"]:focus,
+.dm-form input[type="number"]:focus,
+.dm-form select:focus {
+    border-color: #a78bfa;
+    background: rgba(0, 0, 0, 0.45);
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.12);
+}
+
+.dm-form select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a78bfa' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 34px;
+}
+
+.dm-form select option {
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+/* File input */
+.dm-form input[type="file"] {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px dashed rgba(167, 139, 250, 0.3);
+    border-radius: 9px;
+    padding: 10px 14px;
+    color: #94a3b8;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.dm-form input[type="file"]:hover {
+    border-color: rgba(167, 139, 250, 0.55);
+    color: #c4b5fd;
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.dm-form input[type="file"]::file-selector-button {
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 6px;
+    color: #c4b5fd;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: all 0.2s ease;
+}
+
+.dm-form input[type="file"]::file-selector-button:hover {
+    background: rgba(139, 92, 246, 0.3);
+    border-color: #a78bfa;
+}
+
+/* Botón crear */
+.dm-form button {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 13px 20px;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+    margin-top: 2px;
+    font-family: inherit;
+}
+
+.dm-form button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.55);
+    background: linear-gradient(135deg, #9d6ff7 0%, #7577f5 100%);
+}
+
+.dm-form button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}

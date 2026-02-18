@@ -1,6 +1,8 @@
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from src.core.character.enemy import Enemy
+from src.features.world.domain.token import EnemyToken
 from src.core.game.Event import Event, EventContext, EventHandler, GameState
 from src.core.character.ProgresionSystem import ProgressionSystem
 
@@ -195,3 +197,42 @@ class SpatialActionValidator(EventHandler):
 
         if actor.current_location != target.current_location:
             raise RuntimeError("Objetivo fuera de alcance espacial")
+
+class CreateEnemyHandler(EventHandler):
+    def handle(self, event: Event, state: GameState) -> None:
+        if event.type != "create_enemy":
+            return
+        
+        enemy = Enemy(
+            id=event.payload["id"],
+            name=event.payload["name"],
+            hp=event.payload["hp"],
+            size=event.payload["size"],
+            max_hp=event.payload["max_hp"],
+            ac=event.payload["ac"],
+            asset_url=event.payload["asset_url"]
+        )
+        state.enemies[enemy.id] = enemy
+        enemy_token = EnemyToken(
+            id=enemy.id,  # Usamos el mismo UUID para el token
+            enemy_id=enemy.id,
+            x=0,  # posición inicial por defecto
+            y=0,
+            size=enemy.size,
+            texture_url=enemy.asset_url,
+        )
+
+        state.add_token(enemy_token.to_dict())
+
+        state.dispatch(Event(
+            type="enemy_created",
+            context=EventContext(actor_id=enemy.id),
+            payload={
+                "name": event.payload["name"],
+                "hp": event.payload["hp"],
+                "max_hp": event.payload["max_hp"],
+                "ac": event.payload["ac"],
+                "asset_url": event.payload["asset_url"]
+            },
+            cancelable=False
+        ))

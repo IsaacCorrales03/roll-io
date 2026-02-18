@@ -133,3 +133,14 @@ class GetActorLocationHandler(QueryHandler):
         return actor.current_location
 
 
+class GetEntities(Query):
+    def __init__(self):
+        pass
+
+class GetEntitiesHandler(QueryHandler):
+    def handle(self, query: GetEntities, state: GameState):
+        entities = {
+            "characters": list(state.characters.values()),
+            "enemies": list(state.enemies.values()),
+        }
+        return entities

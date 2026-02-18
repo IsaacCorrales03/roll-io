@@ -214,3 +214,24 @@ class StatusAction(Action):
         )
         state.dispatch(event)
         return event
+
+class CreateEnemyAction(Action):
+    def __init__(self, command: CreateEnemyCommand):
+        self.command = command
+
+    def execute(self, state: GameState) -> Event:
+        event = Event(
+            type="create_enemy",
+            context=EventContext(),
+            payload={
+                "name": self.command.name,
+                "hp": self.command.hp,
+                "max_hp": self.command.max_hp,
+                "ac": self.command.ac,
+                "asset_url": self.command.asset_url,
+                "size": self.command.size
+            },
+            cancelable=True
+        )
+        state.dispatch(event)
+        return event
