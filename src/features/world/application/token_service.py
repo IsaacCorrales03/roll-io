@@ -17,7 +17,7 @@ class TokenService:
         x: int,
         y: int,
         size: tuple[int, int] = (1, 1),
-        texture_url: str | None = None,
+        texture: str | None = None,
         fallback_color: str = "#ff0000",
         owner_user_id: uuid.UUID | None = None,
         is_visible: bool = True,
@@ -30,7 +30,7 @@ class TokenService:
             x=x,
             y=y,
             size=size,
-            texture_url=texture_url,
+            texture_url=texture,
             fallback_color=fallback_color,
             owner_user_id=owner_user_id,
             is_visible=is_visible,
@@ -58,6 +58,8 @@ class TokenService:
     def get_by_character(self, character_id: uuid.UUID):
         return self.repo.get_by_character(character_id)
 
+    def get_by_characters(self, character_ids: list[uuid.UUID]):
+        return self.repo.get_by_characters(character_ids)
     # -------------------------
     # MOVE
     # -------------------------

@@ -21,7 +21,7 @@ class CharacterRepository:
                         level,
                         strength, dexterity, constitution,
                         intelligence, wisdom, charisma,
-                        hp, max_hp, token_texture
+                        hp, max_hp, texture
                     ) VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     str(character["id"]),

@@ -26,7 +26,7 @@ class Token:
         self.size = size
 
         self.fallback_color = fallback_color
-
+        self.texture_url = texture_url
         self.owner_user_id = owner_user_id
         self.is_visible = is_visible
         self.label = label
@@ -41,6 +41,7 @@ class Token:
             "owner_user_id": str(self.owner_user_id) if self.owner_user_id else None,
             "is_visible": self.is_visible,
             "label": self.label,
+            "asset": self.texture_url
         }
 class EnemyToken(Token):
     def __init__(

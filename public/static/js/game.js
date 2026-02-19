@@ -1,4 +1,12 @@
 let socket;
+let MAP_WIDTH;
+let MAP_HEIGHT;
+let TILE_SIZE;
+let current_section_offset_x;
+let current_section_offset_y;
+
+let isDM;
+let myCharacterId;
 
 /* ================================
    SOCKET.IO - CONEXIÓN
@@ -9,7 +17,7 @@ window.onload = () => {
     socket.on('connect', () => {
         console.log('✅ Socket conectado');
         socket.emit('join_campaign', { code: campaignCode });
-        initializeGame();
+        socket.emit("load_game_resources", { code: campaignCode });
 
     });
 
@@ -17,6 +25,33 @@ window.onload = () => {
         console.log('👋 Jugador se unió:', d);
         // TODO: Actualizar lista de jugadores/tokens
     });
+    socket.on('game_resources_loaded', d => {
+        isDM = d.is_dm;
+        myCharacterId = d.my_character_id;
+        MAP_WIDTH = d.current_section.width_px;
+        MAP_HEIGHT = d.current_section.height_px;
+        TILE_SIZE = d.current_section.tile_size;
+        current_section_offset_x = d.current_section.offset_x;
+        current_section_offset_y = d.current_section.offset_y;
+
+        // Mostrar panel correcto
+        if (isDM) {
+            document.getElementById('dm-panel').style.display = 'block';
+        } else {
+            document.getElementById('player-panel').style.display = 'block';
+        }
+
+        // Rellenar map-info con datos del socket
+        document.getElementById('map-scene-name').textContent = d.current_scene.name;
+        document.getElementById('map-grid-info').textContent =
+            `Grid: ${TILE_SIZE}px · ${MAP_WIDTH / TILE_SIZE}×${MAP_HEIGHT / TILE_SIZE} tiles`;
+        document.getElementById('map-info').style.display = 'block';
+
+        mapImage = new Image();
+        mapImage.onload = () => { initializeGame(); };
+        mapImage.src = `/storage${d.current_scene.map_url}`;
+    });
+
 
     socket.on('player_left', d => {
         console.log('👋 Jugador salió:', d);
@@ -76,52 +111,68 @@ window.onload = () => {
     });
     socket.on("enemy_created", (data) => {
 
-        // Evitar duplicados
-        if (document.querySelector(`[data-token-id="${data.id}"]`)) {
-            return;
-        }
+        if (document.querySelector(`[data-token-id="${data.id}"]`)) return;
 
-        const token = document.createElement("div");
-        token.className = "token enemy";
-
-        token.dataset.tokenId = data.id;
-        token.dataset.name = data.name;
-        token.dataset.hp = data.hp;
-        token.dataset.maxHp = data.max_hp;
-        token.dataset.ac = data.ac || 10;
-        token.dataset.gridX = data.x;
-        token.dataset.gridY = data.y;
-
-        // Posición centrada como usas en tu sistema
-        token.style.left = `${data.x * TILE_SIZE + TILE_SIZE / 2}px`;
-        token.style.top = `${data.y * TILE_SIZE + TILE_SIZE / 2}px`;
-        token.style.width = `${data.size[0] * TILE_SIZE}px`;
-        token.style.height = `${data.size[1] * TILE_SIZE}px`;
-
-        token.innerHTML = `
-        <img src="${data.asset}"
-             draggable="false"
-             style="width:100%; height:100%; object-fit:contain;">
-    `;
-
+        const token = createTokenElement(data);
         document.getElementById("tokens-container").appendChild(token);
 
-        // Actualizar grid lógico
-        if (typeof updateGridState === "function") {
+        updateGridState(data.id, null, null, data.x, data.y);
+    });
+
+
+    socket.on("tokens_sync", (tokens) => {
+
+        document.querySelectorAll(".token").forEach(t => t.remove());
+        initializeGrid();
+
+        tokens.forEach(data => {
+            const token = createTokenElement(data);
+            document.getElementById("tokens-container").appendChild(token);
             updateGridState(data.id, null, null, data.x, data.y);
-        }
-
-        // Si eres DM, refrescar lista
-        if (isDM) {
-            socket.emit("get_entities", { campaign_code: campaignCode });
-        }
-
-        console.log("🧟 Enemigo creado:", data.name);
+        });
     });
 
 
     // Inicializar el resto de la UI
 };
+function createTokenElement(data) {
+    const token = document.createElement("div");
+    console.log("Creating token element with data:", data);
+    token.className = `token ${data.type || ""}`;
+
+    token.dataset.tokenId = data.id;
+    token.dataset.name = data.name || "";
+    token.dataset.hp = data.hp || 0;
+    token.dataset.maxHp = data.max_hp || 0;
+    token.dataset.ac = data.ac || 10;
+    token.dataset.gridX = data.x;
+    token.dataset.gridY = data.y;
+    token.dataset.asset = data.asset || "";
+    token.dataset.label = data.label || "";
+
+    token.style.left = `${data.x * TILE_SIZE + TILE_SIZE / 2}px`;
+    token.style.top = `${data.y * TILE_SIZE + TILE_SIZE / 2}px`;
+    token.style.width = `${data.size[0] * TILE_SIZE}px`;
+    token.style.height = `${data.size[1] * TILE_SIZE}px`;
+
+    if (data.texture || data.asset) {
+        token.innerHTML = `
+            <img src="${data.texture || data.asset}" alt="${data.name}"
+                 draggable="false"
+                 style="width:100%; height:100%; object-fit:contain;">
+        `;
+    }
+
+    if (data.label) {
+        const label = document.createElement("div");
+        label.className = "token-label";
+        label.style.textAlign = "center";
+        label.textContent = data.label;
+        token.appendChild(label);
+    }
+
+    return token;
+}
 
 /* ================================
    MAPA CON PAN/ZOOM
@@ -145,29 +196,38 @@ let panStartY = 0;
 let showGridOverlay = true;
 
 // Configurar tamaño de canvas
-mapCanvas.width = MAP_WIDTH;
-mapCanvas.height = MAP_HEIGHT;
-gridCanvas.width = MAP_WIDTH;
-gridCanvas.height = MAP_HEIGHT;
 
+
+let GRID_COLS;
+let GRID_ROWS;
 
 /* ================================
    INICIALIZAR JUEGO
 ================================ */
 function initializeGame() {
+    mapCanvas.width = MAP_WIDTH;
+    mapCanvas.height = MAP_HEIGHT;
+    gridCanvas.width = MAP_WIDTH;
+    gridCanvas.height = MAP_HEIGHT;
+    GRID_COLS = Math.floor(MAP_WIDTH / TILE_SIZE);
+    GRID_ROWS = Math.floor(MAP_HEIGHT / TILE_SIZE);
     renderMap();
     centerMap();
 
-    if (!isDM) {
+    if (!isDM && myCharacterId) {
         loadCharacter();
     }
 
-    // Inicializar grid después de un pequeño delay para que los tokens estén cargados
     if (isDM) {
         socket.emit("get_entities", { campaign_code: campaignCode });
         initializeGrid();
+        setupDMControls(); 
     }
+
+    socket.emit("get_tokens", { campaign_code: campaignCode });
+    hideLoader();
 }
+
 
 function renderMap() {
     // Dibujar SOLO la sección recortada
@@ -495,9 +555,7 @@ document.getElementById('map-viewport').addEventListener('mouseleave', () => {
    GRID LÓGICO DEL MAPA
 ================================ */
 
-// Calcular dimensiones del grid
-const GRID_COLS = Math.floor(MAP_WIDTH / TILE_SIZE);
-const GRID_ROWS = Math.floor(MAP_HEIGHT / TILE_SIZE);
+
 
 // Grid lógico: null = vacío, objeto = token info
 let gridState = [];
@@ -536,6 +594,7 @@ function isCellOccupied(x, y) {
 }
 
 function updateGridState(tokenId, oldX, oldY, newX, newY) {
+    console.log(tokenId, oldX, oldY, newX, newY);
     // Limpiar posición anterior
     if (gridState[oldY] && gridState[oldY][oldX]) {
         gridState[oldY][oldX] = null;
@@ -661,27 +720,17 @@ function renderDMEntities(data) {
     }
 }
 
-if (isDM) {
-    
+function setupDMControls() {
     // Click en token → seleccionar
     document.addEventListener('click', (e) => {
         const token = e.target.closest('.token');
-
         if (token) {
             e.stopPropagation();
-
-            // Quitar selección previa
-            document.querySelectorAll('.token').forEach(t => {
-                t.classList.remove('selected');
-            });
-
+            document.querySelectorAll('.token').forEach(t => t.classList.remove('selected'));
             selectedToken = token;
             token.classList.add('selected');
-
             return;
         }
-
-        // Si no clickeó un token, deseleccionar
         if (selectedToken && !e.target.closest('.token')) {
             selectedToken.classList.remove('selected');
             selectedToken = null;
@@ -693,49 +742,18 @@ if (isDM) {
         if (!selectedToken) return;
         e.stopPropagation();
 
-        // Obtener coordenadas CORRECTAS considerando scroll y zoom
         const rect = gridCanvas.getBoundingClientRect();
+        const tileX = Math.floor((e.clientX - rect.left) / (TILE_SIZE * mapScale));
+        const tileY = Math.floor((e.clientY - rect.top) / (TILE_SIZE * mapScale));
 
-        // Posición del click en el viewport
-        const viewportX = e.clientX - rect.left;
-        const viewportY = e.clientY - rect.top;
+        if (!isValidGridPosition(tileX, tileY) || isCellOccupied(tileX, tileY)) return;
 
-        // Convertir a coordenadas del canvas (considerando zoom)
-        // Como el canvas está dentro del container con transform, usamos la escala
-        const canvasX = viewportX / mapScale;
-        const canvasY = viewportY / mapScale;
-
-        // Convertir a coordenadas de grid
-        const tileX = Math.floor(canvasX / TILE_SIZE);
-        const tileY = Math.floor(canvasY / TILE_SIZE);
-
-
-        // Validar posición
-        if (!isValidGridPosition(tileX, tileY)) {
-            console.warn('❌ Posición fuera del grid');
-            return;
-        }
-
-        if (isCellOccupied(tileX, tileY)) {
-            const occupant = gridState[tileY][tileX];
-            console.warn(`❌ Casilla ocupada por: ${occupant.name}`);
-            return;
-        }
-
-        // Obtener posición anterior
         const oldX = parseInt(selectedToken.dataset.gridX || 0);
         const oldY = parseInt(selectedToken.dataset.gridY || 0);
 
-        // Actualizar grid state
         updateGridState(selectedToken.dataset.tokenId, oldX, oldY, tileX, tileY);
-
-        // Actualizar dataset del token
         selectedToken.dataset.gridX = tileX;
         selectedToken.dataset.gridY = tileY;
-
-        // Emitir al servidor
-        console.log(`Moviendo token ${selectedToken.dataset.id} a (${tileX}, ${tileY})`);
-        console.log(selectedToken.dataset.tokenId)
 
         socket.emit("move_token", {
             campaign_code: campaignCode,
@@ -744,35 +762,25 @@ if (isDM) {
             y: tileY
         });
 
-        // Deseleccionar
         selectedToken.classList.remove('selected');
         selectedToken = null;
     });
 
-    // También permitir click en mapCanvas (el fondo)
+    // Igual para mapCanvas
     mapCanvas.addEventListener('click', (e) => {
         if (!selectedToken) return;
         e.stopPropagation();
 
         const rect = mapCanvas.getBoundingClientRect();
-        const viewportX = e.clientX - rect.left;
-        const viewportY = e.clientY - rect.top;
+        const tileX = Math.floor((e.clientX - rect.left) / (TILE_SIZE * mapScale));
+        const tileY = Math.floor((e.clientY - rect.top) / (TILE_SIZE * mapScale));
 
-        const canvasX = viewportX / mapScale;
-        const canvasY = viewportY / mapScale;
-
-        const tileX = Math.floor(canvasX / TILE_SIZE);
-        const tileY = Math.floor(canvasY / TILE_SIZE);
-
-        if (!isValidGridPosition(tileX, tileY) || isCellOccupied(tileX, tileY)) {
-            return;
-        }
+        if (!isValidGridPosition(tileX, tileY) || isCellOccupied(tileX, tileY)) return;
 
         const oldX = parseInt(selectedToken.dataset.gridX || 0);
         const oldY = parseInt(selectedToken.dataset.gridY || 0);
 
         updateGridState(selectedToken.dataset.tokenId, oldX, oldY, tileX, tileY);
-
         selectedToken.dataset.gridX = tileX;
         selectedToken.dataset.gridY = tileY;
 
@@ -787,6 +795,16 @@ if (isDM) {
         selectedToken = null;
     });
 }
+function hideLoader() {
+    const loader = document.getElementById("loading-screen");
+    loader.style.opacity = "0";
+    loader.style.transition = "opacity 0.3s ease";
+
+    setTimeout(() => {
+        loader.remove();
+    }, 300);
+}
+
 function openDMTab(name) {
     document.querySelectorAll('#dm-tab-map, #dm-tab-entities, #dm-tab-combat')
         .forEach(t => t.style.display = 'none');

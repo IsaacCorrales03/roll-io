@@ -8,6 +8,7 @@ from flask import request
 from flask_socketio import emit, join_room
 
 # Models and queries
+from src.shared.utils.game_state_builder import build_game_state
 from src.core.game.Event import MoveTokenEvent, Event
 from src.core.game.querys import GetArmorClass, GetEntities
 
@@ -15,7 +16,7 @@ from src.core.game.querys import GetArmorClass, GetEntities
 from src.features.auth.application.auth_service import AuthService
 from src.features.campaigns.infrastructure.mysql_campaign_repository import MySQLCampaignRepository
 from src.features.characters.infrastructure.character_repository import CharacterRepository
-
+from src.shared.utils.tokens_utils import normalize_token
 
 def register_socket_handlers(
     socketio,
@@ -243,7 +244,8 @@ def register_socket_handlers(
         event = MoveTokenEvent(token_id=token_id, x=x, y=y)  # type: ignore
         try:
             state.dispatch(event)
-
+            print("Emitting token move:", token_id, x, y)
+            
             emit("token_moved", {
                 "token_id": token_id,
                 "x": x,
@@ -253,6 +255,124 @@ def register_socket_handlers(
             import traceback
             traceback.print_exc()
             emit("error", {"message": str(e)})
+
+    @socketio.on("load_game_resources")
+    def handle_load_game_resources(data):
+
+        code = data.get("code")
+        session_id = request.cookies.get("session_id")
+        from flask import current_app
+        services = current_app.extensions["services"]
+
+        if not code or code not in campaigns_dict:
+            emit("load_game_error", {"error": "Campaña no válida"})
+            return
+
+        if not session_id:
+            emit("load_game_error", {"error": "No autenticado"})
+            return
+
+        session = auth_service.session_repo.get(UUID(session_id))
+        if not session or session.revoked or not session.user_id:
+            emit("load_game_error", {"error": "Sesión inválida"})
+            return
+
+        user_id = str(session.user_id)
+
+        # -------------------------
+        # CAMPAIGN
+        # -------------------------
+        campaign_model = campaigns_dict[code]
+        campaign_instance = campaign_repo.get_by_id(campaign_model["campaign_id"])
+        if not campaign_instance:
+            emit("load_game_error", {"error": "Campaña no encontrada"})
+            return
+
+        # -------------------------
+        # WORLD
+        # -------------------------
+        world = services["world_service"].get_by_id(campaign_instance["world_id"])
+        if not world:
+            emit("load_game_error", {"error": "Mundo no encontrado"})
+            return
+
+        # -------------------------
+        # PLAYERS
+        # -------------------------
+        raw_players = campaign_model["players"]  
+        players = []
+        my_character_id = None
+        is_dm = False
+
+        for p in raw_players.values():
+            player = {
+                "user_id": p["user_id"],
+                "username": p["username"],
+                "character_uuid": p["character_uuid"],
+                "is_dm": p["is_dm"]
+            }
+            players.append(player)
+
+            if p["user_id"] == user_id:
+                my_character_id = p["character_uuid"]
+                is_dm = p["is_dm"]
+
+        # -------------------------
+        # GAME STATE
+        # -------------------------
+        if code not in game_states_dict:
+            game_states_dict[code] = build_game_state(code, campaigns_dict, character_repo)
+        game_state = game_states_dict[code]
+
+        # -------------------------
+        # TOKENS
+        # -------------------------
+        character_ids = [
+            UUID(p["character_uuid"])
+            for p in players
+            if p.get("character_uuid")
+        ]
+
+        tokens = services["token_service"].get_by_characters(character_ids)
+
+        my_token = None
+        for token in tokens:
+            game_state.add_token(token)
+            if str(token["character_id"]) == my_character_id:
+                my_token = token
+
+        # -------------------------
+        # SCENE
+        # -------------------------
+        current_scene = world.scenes[0] if world.scenes else None
+        if not current_scene:
+            emit("load_game_error", {"error": "Escena no encontrada"})
+            return
+
+        current_section = current_scene.sections[0] if current_scene.sections else None
+
+        # -------------------------
+        # EMIT DATA
+        # -------------------------
+        emit("game_resources_loaded", {
+            "campaign": campaign_model,
+            "players": players,
+            "world": {
+                "id": str(world.id),
+                "name": world.name
+            },
+            "current_scene": {
+                "id": str(current_scene.id),
+                "name": current_scene.name,
+                "map_url": current_scene.map_url
+            },
+            "current_section": current_section.to_dict() if current_section else None,
+            "tokens": tokens,
+            "my_character_id": my_character_id,
+            "my_token": my_token,
+            "is_dm": is_dm
+        })
+
 
     @socketio.on("get_entities")
     def handle_get_entities(data): 
@@ -271,6 +391,7 @@ def register_socket_handlers(
             emit("error", {"message": str(e)})
             return
         print(result)
+        print()
         characters = [
             {
                 "id": str(char.id),
@@ -278,6 +399,8 @@ def register_socket_handlers(
                 "hp": char.hp,
                 "max_hp": char.max_hp,
                 "ac": char.calc_ac(),
+                "texture": char.texture
+                
             }
             for char in result.get("characters", [])
         ]
@@ -289,6 +412,7 @@ def register_socket_handlers(
                 "hp": enemy.hp,
                 "max_hp": enemy.max_hp,
                 "ac": enemy.ac,
+                "texture": enemy.asset_url
             }
             for enemy in result.get("enemies", [])
         ]
@@ -335,3 +459,13 @@ def register_socket_handlers(
             "x": spawn_x,
             "y": spawn_y
         }, to=data["campaign_code"])
+
+    @socketio.on("get_tokens")
+    def handle_get_tokens(data):
+        state = game_states_dict[data["campaign_code"]]
+        tokens = state.tokens.values()
+        
+        emit("tokens_sync", [
+            normalize_token(token)
+            for token in tokens
+        ])

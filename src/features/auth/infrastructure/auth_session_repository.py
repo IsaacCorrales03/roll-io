@@ -27,6 +27,7 @@ class MySQLAuthSessionRepository(AuthSessionRepository):
             )
         )
         self.db.commit()
+        
 
     def get(self, session_id: UUID) -> AuthSession | None:
         cur = self.db.cursor(dictionary=True)

@@ -65,7 +65,7 @@ class MySQLWorldRepository(WorldRepository):
 
         self.db.commit()
 
-    def get(self, world_id: UUID) -> World | None:
+    def get_by_id(self, world_id: UUID) -> World | None:
         cur = self.db.cursor(dictionary=True)
 
         cur.execute(

@@ -2,6 +2,7 @@ import os
 from uuid import UUID
 from flask import Flask, g, make_response, redirect, render_template, request
 from flask_cors import CORS
+import time
 
 # Blueprints
 from src.interfaces.http.routes.races_routes import races_bp
@@ -9,7 +10,7 @@ from src.interfaces.http.routes.dnd_clasess_routes import classes_bp
 from src.interfaces.http.routes.characters_routes import character_bp
 from src.interfaces.http.routes.campaign_routes import campaign_bp
 from src.interfaces.http.routes.enemies_routes import enemy_bp
-
+from src.shared.utils.game_state_builder import build_game_state
 # Services
 from src.features.auth.application.auth_service import AuthService
 from src.shared.database.db_service import create_db_service
@@ -104,6 +105,23 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
         g.world_service = world_service
         g.section_service = section_service
         g.token_service = token_service
+    app.extensions["services"] = {
+        "auth_service": auth_service,
+        "character_service": character_service,
+        "campaign_service": campaign_service,
+        "world_service": world_service,
+        "section_service": section_service,
+        "token_service": token_service
+    }
+    app.extensions["repos"] = {
+        "user_repo": user_repo,
+        "session_repo": session_repo,
+        "character_repo": character_repo,
+        "campaign_repo": campaign_repo,
+        "world_repo": world_repo,
+        "section_repo": section_repo,
+        "token_repo": token_repo
+    }
 
     @app.context_processor
     def inject_user():
@@ -314,89 +332,18 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
 
     @app.route("/game")
     def game():
-        from src.shared.utils.game_state_builder import build_game_state
-        
+        start = time.perf_counter()
         code = request.args.get("code")
         if not code or code not in campaigns_dict:
-            return "Campaña no válida", 404
-
-        campaign_id = campaigns_dict[code]["campaign_id"]
-        campaign_instance = campaign_repo.get_by_id(campaign_id)
-        if not campaign_instance:
-            return "Campaña no encontrada", 404
-
-        world = world_repo.get(campaign_instance["world_id"])
-        if not world:
-            return "Mundo no encontrado", 404
-
-        session_id = request.cookies.get("session_id")
-        if not session_id:
-            return redirect("/login")
-
-        session = auth_service.session_repo.get(UUID(session_id))
-        if not session or session.revoked:
-            return redirect("/login")
-
-        user_id = str(session.user_id)
-        if not user_id:
-            return redirect("/login")
-
-        campaign_model = campaigns_dict[code]
-
-        players = [
-            {
-                "user_id": p["user_id"],
-                "username": p["username"],
-                "character_uuid": p["character_uuid"],
-                "is_dm": p["is_dm"]
-            }
-            for p in campaign_model["players"].values()
-        ]
-
-        current_scene = world.scenes[0]  # type: ignore
-        my_character_id = get_character_id(players, user_id)
-        tokens = []
-        my_token = None
-
-        # Get or create game state
-        if code not in game_states_dict:
-            game_states_dict[code] = build_game_state(code, campaigns_dict, character_repo)
-        game_state = game_states_dict[code]
-
-        for p in players:
-            character_id = p.get("character_uuid")
-            if not character_id:
-                continue
-
-            token = g.token_service.get_by_character(UUID(character_id))
-            if not token:
-                continue
-
-            tokens.append(token)
-            game_state.add_token(token)
-            if character_id == my_character_id:
-                my_token = token
-
-        current_section = current_scene.sections[0] if current_scene.sections else None  # type: ignore
-        is_dm = any(p["is_dm"] and p["user_id"] == user_id for p in players)
-
-        return render_template(
+            return "Campaña no válida", 400
+        response = render_template(
             "game.html",
             code=code,
-            players=players,
-            campaign_model=campaign_model,
-            world=world,
-            my_character_id=my_character_id,
-            current_scene={
-                "id": str(current_scene.id),
-                "name": current_scene.name,
-                "map_url": current_scene.map_url
-            },
-            tokens=tokens,
-            my_token=my_token if my_token else None,
-            is_dm=is_dm,
-            current_section=current_section.to_dict() if current_section else None
         )
+        print("TOTAL: ", time.perf_counter() - start, "seconds")
+        return response
+
+    
     @app.route('/storage/<path:filename>')
     def serve_storage(filename):
         from flask import send_from_directory, abort

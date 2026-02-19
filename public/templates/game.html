@@ -15,6 +15,9 @@
 </head>
 
 <body class="bg-slate-950 text-white">
+<div id="loading-screen">
+    <div class="loader">Cargando...</div>
+</div>
 
     <!-- Animated background blobs -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none" style="z-index: 0;">
@@ -37,25 +40,7 @@
 
                     <!-- Tokens de jugadores -->
                     <div id="tokens-container">
-                        {% for t in tokens %}
-                        {% if t.is_visible %}
-                        <div class="token {% if t.character_id == my_character_id %}me{% endif %}" style="
-                                left: {{ t.x * current_section.tile_size + current_section.tile_size/2 }}px;
-                                top: {{ t.y * current_section.tile_size + current_section.tile_size/2 }}px;
-                                width: {{ t.size_x * current_section.tile_size }}px;
-                                height: {{ t.size_y * current_section.tile_size }}px;
-                            " data-token-id="{{ t.id }}" data-character-id="{{ t.character_id }}"
-                            data-owner-id="{{ t.owner_user_id }}" data-name="{{ t.label }}"
-                            data-level="{{ t.level or 1 }}" data-class="{{ t.class_name or 'Aventurero' }}"
-                            data-hp="{{ t.current or 0 }}" data-max-hp="{{ t.max_hp or 0 }}"
-                            data-ac="{{ t.ac or 10 }}">
 
-                            <img src="{{ url_for('static', filename=t.token_texture.lstrip('/')) }}" alt="{{ t.label }}"
-                                draggable="false" style="width: 100%; height: 100%; object-fit: contain;">
-
-                        </div>
-                        {% endif %}
-                        {% endfor %}
                     </div>
 
                 </div>
@@ -80,20 +65,16 @@
                 </div>
 
                 <!-- Info del mapa -->
-                <div class="map-info">
+                <div class="map-info" id="map-info" style="display:none;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <svg class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd"
                                 d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z"
                                 clip-rule="evenodd" />
                         </svg>
-                        <strong>{{ current_scene.name }}</strong>
+                        <strong id="map-scene-name"></strong>
                     </div>
-                    <div style="margin-top: 6px; font-size: 11px; opacity: 0.6;">
-                        Grid: {{ current_section.tile_size }}px ·
-                        {{ current_section.width_px // current_section.tile_size }}×{{ current_section.height_px //
-                        current_section.tile_size }} tiles
-                    </div>
+                    <div style="margin-top: 6px; font-size: 11px; opacity: 0.6;" id="map-grid-info"></div>
                 </div>
             </div>
 
@@ -125,8 +106,7 @@
         </div>
 
         <!-- PANEL DERECHO (Character Sheet) -->
-        {% if not is_dm %}
-        <aside class="side-panel">
+        <aside class="side-panel" id="player-panel" style="display: none;">
             <div class="tab-buttons">
                 <button onclick="openTab('info')" class="tab-btn active" id="tab-btn-info">Info</button>
                 <button onclick="openTab('gear')" class="tab-btn" id="tab-btn-gear">Equipo</button>
@@ -168,9 +148,7 @@
                 <ul id="features-list" class="feature-list"></ul>
             </div>
         </aside>
-        {% endif %}
-        {% if is_dm %}
-        <aside class="dm-panel">
+        <aside class="dm-panel" id="dm-panel" style="display:none;">
 
             <div class="tab-buttons">
                 <button onclick="openDMTab('map')" class="tab-btn active" id="dm-tab-btn-map">Mapa</button>
@@ -219,24 +197,11 @@
             </div>
 
         </aside>
-        {% endif %}
 
     </div>
 
     <script>
-        // BACKEND TO FRONTEND VARIABLES
-
-        const isDM = {{ 'true' if is_dm else 'false' }};
-        const myCharacterId = "{{ my_character_id }}";
         const campaignCode = "{{ code }}";
-        const MAP_WIDTH = {{ current_section.width_px }};
-        const MAP_HEIGHT = {{ current_section.height_px }};
-        const TILE_SIZE = {{ current_section.tile_size }};
-        const current_section_offset_x = {{ current_section.offset_x }};
-        const current_section_offset_y = {{ current_section.offset_y }};
-        const mapImage = new Image();
-        {% set filename = current_scene.map_url.replace('/uploads', 'uploads') %}
-        mapImage.src = "{{ url_for('serve_storage', filename=filename) }}";
     </script>
     <script src="{{ url_for('static', filename='js/game.js') }}" defer></script>
 </body>

@@ -56,3 +56,5 @@ class WorldService:
         self.repo.save(world)
 
         return world
+    def get_by_id(self, world_id) -> World | None:
+        return self.repo.get_by_id(world_id)

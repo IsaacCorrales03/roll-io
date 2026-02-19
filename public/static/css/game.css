@@ -903,3 +903,14 @@ body {
     transform: translateY(0);
     box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 }
+#loading-screen {
+    position: fixed;
+    inset: 0;
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    color: white;
+    font-size: 1.5rem;
+}

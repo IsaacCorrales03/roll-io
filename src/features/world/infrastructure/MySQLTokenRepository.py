@@ -68,7 +68,7 @@ class MySQLTokenRepository(TokenRepository):
         cur.execute("""
             SELECT 
                 t.*,
-                c.token_texture
+                c.texture
             FROM tokens t
             JOIN characters c ON c.id = t.character_id
             WHERE t.character_id = %s
@@ -76,6 +76,34 @@ class MySQLTokenRepository(TokenRepository):
         """, (character_id,))
 
         return cur.fetchone()
+    # -------------------------
+    # GET BY CHARACTERS (BATCH)
+    # -------------------------
+    def get_by_characters(self, character_ids: list[UUID]) -> list[dict]:
+        if not character_ids:
+            return []
+
+        # Normalizar a string
+        normalized_ids = [
+            str(cid) if isinstance(cid, UUID) else cid
+            for cid in character_ids
+        ]
+
+        placeholders = ", ".join(["%s"] * len(normalized_ids))
+
+        query = f"""
+            SELECT 
+                t.*,
+                c.texture
+            FROM tokens t
+            JOIN characters c ON c.id = t.character_id
+            WHERE t.character_id IN ({placeholders})
+        """
+
+        cur = self.db.cursor(dictionary=True)
+        cur.execute(query, tuple(normalized_ids))
+
+        return cur.fetchall()
 
     # -------------------------
     # UPDATE POSITION

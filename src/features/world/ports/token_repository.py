@@ -15,7 +15,10 @@ class TokenRepository(ABC):
     @abstractmethod
     def get_by_character(self, character_id: UUID | str) -> dict | None:
         pass
-
+    
+    @abstractmethod
+    def get_by_characters(self, character_ids: list[UUID]) -> list[dict]:
+        pass   
     @abstractmethod
     def update_position(self, token_id: UUID | str, x: int, y: int) -> None:
         pass

@@ -21,7 +21,7 @@ class Character(Actor):
         # Identidad básica
         self.name = name
         self.level = 1
-        self.token_texture = None
+        self.texture = None
         # Referencias a raza y clase
         self.dnd_class = dnd_class
         self.race = race
@@ -133,7 +133,7 @@ class Character(Actor):
                 }
                 for f in self.features
             ],
-            "token_texture": self.token_texture
+            "texture": self.texture
         }
     @classmethod
     def from_dict(
@@ -173,7 +173,7 @@ class Character(Actor):
 
         # ---- recalcular derivados ----
         char.proficiency_bonus = 2 + ((char.level - 1) // 4)
-        char.token_texture = data.get("token_texture", None)
+        char.texture = data.get("texture", None)
         # ---- features ----
         char.features.clear()
         for lvl in range(1, char.level + 1):

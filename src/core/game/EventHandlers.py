@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from src.core.character.enemy import Enemy
-from src.features.world.domain.token import EnemyToken
+from src.features.world.domain.token import Token
 from src.core.game.Event import Event, EventContext, EventHandler, GameState
 from src.core.character.ProgresionSystem import ProgressionSystem
 
@@ -173,7 +173,7 @@ class TokenMovedHandler(EventHandler):
     def handle(self, event: Event, state: GameState) -> None:
         if event.type != "token_moved":
             return
-        
+        print("Handling token move event:", event.payload)
         state.move_token(event.payload["token_id"], event.payload["x"], event.payload["y"])
 
 class SpatialActionValidator(EventHandler):
@@ -213,15 +213,16 @@ class CreateEnemyHandler(EventHandler):
             asset_url=event.payload["asset_url"]
         )
         state.enemies[enemy.id] = enemy
-        enemy_token = EnemyToken(
+        enemy_token = Token(
             id=enemy.id,  # Usamos el mismo UUID para el token
-            enemy_id=enemy.id,
+            actor_id=enemy.id,
             x=0,  # posición inicial por defecto
             y=0,
             size=enemy.size,
             texture_url=enemy.asset_url,
+            label=enemy.name
         )
-
+        print("Adding token to state:", enemy_token.to_dict())
         state.add_token(enemy_token.to_dict())
 
         state.dispatch(Event(

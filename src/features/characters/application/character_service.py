@@ -21,9 +21,9 @@ class CharacterService:
             dnd_class=CLASS_MAP[class_key]()
         )
         if token_texture:
-            character.token_texture = token_texture
+            character.texture = token_texture
         else:
-            character.token_texture = f"imgs/{class_key}.jpg" # type: ignore
+            character.texture = f"imgs/{class_key}.jpg" # type: ignore
         self.repo.create(character.to_json(), owner_id, token_texture)
         return character
 
