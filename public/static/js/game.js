@@ -57,7 +57,11 @@ window.onload = () => {
         console.log('👋 Jugador salió:', d);
         // TODO: Actualizar lista de jugadores/tokens
     });
-
+    socket.on('item_equipped_toggled', d => {
+        console.log('🔄 Equip toggled:', d);
+        socket.emit("get_character_data", { character_id: myCharacterId, campaign_code: campaignCode });
+        
+    });
     socket.on('chat_message', data => {
         const el = document.createElement('div');
         el.className = 'chat-message';
@@ -130,6 +134,180 @@ window.onload = () => {
             document.getElementById("tokens-container").appendChild(token);
             updateGridState(data.id, null, null, data.x, data.y);
         });
+    });
+    socket.on("character_data_received", c => {
+        console.log("Character data:", c);
+
+        // Nombre en dorado
+        const nameEl = document.getElementById('char-name');
+        nameEl.textContent = c.name;
+        nameEl.style.cssText = `
+        font-family: 'Cinzel', serif;
+        font-size: 3rem;
+        font-weight: 700;
+        color: #d4a853;
+        text-shadow: 0 0 20px rgba(212,168,83,0.35);
+        letter-spacing: 0.03em;
+        margin-bottom: 4px;
+    `;
+
+        // Raza · Clase · Nivel
+        document.getElementById('char-meta').innerHTML = `
+        <div style="
+            font-size: 1.2rem;
+            color: #94a3b8;
+            letter-spacing: 0.05em;
+            margin-top: 4px;
+            margin-bottom: 20px;
+        ">
+            <span style="color:#475569; font-weight:600">${c.race.name}</span>
+            <span style="color:#475569; margin: 0 6px; font-weight:600; font-size:1rem">·</span>
+            <span style="color:#475569; font-weight:600">${c.class.name}</span>
+            <span style="color:#475569; margin: 0 6px; font-weight:600; font-size:1rem">·</span>
+            <span style="color:#475569; font-weight:600">Nivel ${c.level}</span>
+        </div>
+    `;
+
+        // HP
+        document.getElementById('char-hp').textContent = `${c.hp.current} / ${c.hp.max}`;
+
+        // Peso
+        const currentWeight = c.current_weight ?? 0;
+        const maxWeight = c.max_weight ?? 0;
+        document.getElementById('char-weight').textContent = `${currentWeight} / ${maxWeight} lb`;
+
+        const pct = maxWeight > 0 ? Math.min((currentWeight / maxWeight) * 100, 100) : 0;
+        const bar = document.getElementById('weight-bar');
+        bar.style.width = `${pct}%`;
+        if (pct >= 90) {
+            bar.style.background = 'linear-gradient(90deg, #7f1d1d, #ef4444)';
+            bar.style.boxShadow = '0 0 6px rgba(239,68,68,0.5)';
+        } else if (pct >= 60) {
+            bar.style.background = 'linear-gradient(90deg, #78350f, #f59e0b)';
+            bar.style.boxShadow = '0 0 6px rgba(245,158,11,0.5)';
+        } else {
+            bar.style.background = 'linear-gradient(90deg, #8a6830, #d4a853)';
+            bar.style.boxShadow = '0 0 6px rgba(212,168,83,0.5)';
+        }
+
+        // AC (via socket)
+        socket.emit("get_ac", { actor_id: myCharacterId });
+
+        // Atributos
+        const STAT_MAP = { STR: 'STR', DEX: 'DEX', CON: 'CON', INT: 'INT', WIS: 'WIS', CHA: 'CHA' };
+        const statsDiv = document.getElementById('stats');
+        statsDiv.innerHTML = ''; // limpiar antes
+        Object.entries(STAT_MAP).forEach(([abbr, key]) => {
+            const value = c.attributes[key];
+            const modifier = Math.floor((value - 10) / 2);
+            const modStr = modifier >= 0 ? `+${modifier}` : `${modifier}`;
+            const el = document.createElement('div');
+            el.className = 'stat-item';
+            el.innerHTML = `
+            <div class="stat-label">${abbr}</div>
+            <div class="stat-value">${value}</div>
+            <div class="stat-modifier">${modStr}</div>
+        `;
+            statsDiv.appendChild(el);
+        });
+
+        // Habilidades
+        const featuresList = document.getElementById('features-list');
+        featuresList.innerHTML = '';
+        c.features.forEach(f => {
+            const li = document.createElement('li');
+            li.className = 'feature-item';
+            li.innerHTML = `
+            <div class="feature-name">${f.name}</div>
+            <div class="feature-name">${f.type}</div>
+            <div class="feature-desc">${f.description}</div>
+        `;
+            featuresList.appendChild(li);
+        });
+
+        // Equipo
+        const gearList = document.getElementById('gear-list');
+        gearList.innerHTML = `
+        <li class="feature-item">
+            <div class="feature-name">Arma Principal</div>
+            <div class="feature-desc">
+                ${c.weapon?.name
+                        ? `<strong>${c.weapon.name}</strong>
+                    <br>${c.weapon.dice_count}${c.weapon.dice_size}${c.weapon.bonus ? ` +${c.weapon.bonus}` : ''} ${c.weapon.damage_type}
+                    ${c.weapon.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
+                        : "Sin arma"}
+            </div>
+        </li>
+        <li class="feature-item">
+            <div class="feature-name">Armadura</div>
+            <div class="feature-desc">
+                ${c.armor?.name
+                        ? `<strong>${c.armor.name}</strong>
+                    <br>AC: ${c.armor.base_ac} ${c.armor.dex_bonus ? `(DEX aplica)` : ''}
+                    ${c.armor.stealth_disadvantage ? '<span class="stealth-badge">Desventaja Sigilo</span>' : ''}
+                    ${c.armor.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
+                        : "Sin armadura"}
+            </div>
+        </li>
+        <li class="feature-item">
+            <div class="feature-name">Escudo</div>
+            <div class="feature-desc">
+                ${c.shield?.name
+                        ? `<strong>${c.shield.name}</strong>
+                    <br>AC Bonus: ${c.shield.ac_bonus}
+                    ${c.shield.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
+                        : "Sin escudo"}
+            </div>
+        </li>
+        `;
+
+
+        // Inventario
+        const inventoryList = document.getElementById('inventory-list');
+        inventoryList.innerHTML = '';
+        if (c.inventory && c.inventory.length > 0) {
+            c.inventory.forEach(item => {
+                const type = item.meta.item_type?.toLowerCase();
+                const isEquippable = ['weapon', 'armor', 'shield'].includes(type);
+                const isConsumable = type === 'consumable';
+                const li = document.createElement('li');
+                li.className = 'feature-item item-card';
+                li.dataset.itemId = item.id;
+                li.innerHTML = `
+                <div class="item-header">
+                    <div class="feature-name">${item.meta.name}</div>
+                    <div class="item-type-badge type-${type}">${item.meta.item_type}</div>
+                </div>
+                <div class="feature-desc">${item.meta.description}</div>
+                <div class="item-meta">
+                    <span>Cantidad: <strong>${item.quantity}</strong></span>
+                    ${item.meta.weight ? `<span>Peso: <strong>${item.meta.weight} lb</strong></span>` : ''}
+                    ${item.equipped ? `<span class="equipped-badge">Equipado</span>` : ''}
+                </div>
+                <div class="item-actions">
+                    ${isConsumable ? `
+                        <button class="item-btn btn-use"
+                            onclick="handleItemAction('use', '${item.item_id}')">
+                            ✨ Usar
+                        </button>
+                    ` : ''}
+                    ${isEquippable ? `
+                        <button class="item-btn ${item.equipped ? 'btn-unequip' : 'btn-equip'}"
+                            onclick="handleItemAction('equip', '${item.item_id}')">
+                            ${item.equipped ? ' Desequipar' : ' Equipar'}
+                        </button>
+                    ` : ''}
+                    <button class="item-btn btn-drop"
+                        onclick="handleItemAction('drop', '${item.item_id}')">
+                         Tirar
+                    </button>
+                </div>
+            `;
+                inventoryList.appendChild(li);
+            });
+        } else {
+            inventoryList.innerHTML = '<li class="feature-item">Sin objetos en el inventario.</li>';
+        }
     });
 
 
@@ -221,7 +399,7 @@ function initializeGame() {
     if (isDM) {
         socket.emit("get_entities", { campaign_code: campaignCode });
         initializeGrid();
-        setupDMControls(); 
+        setupDMControls();
     }
 
     socket.emit("get_tokens", { campaign_code: campaignCode });
@@ -431,81 +609,11 @@ function openTab(name) {
    CARGAR PERSONAJE
 ================================ */
 function loadCharacter() {
-    fetch(`/api/character/load?from_id=${myCharacterId}`)
-        .then(r => r.json())
-        .then(c => {
-            console.log("Character data:", c);
-
-            document.getElementById('char-name').textContent = c.name;
-            document.getElementById('char-meta').textContent =
-                `Nivel ${c.level} ${c.race.name} ${c.class.name}`;
-
-            // HP y AC
-            document.getElementById('char-hp').textContent =
-                `${c.hp.current} / ${c.hp.max}`;
-
-
-            // Atributos
-            const STAT_MAP = {
-                STR: 'STR',
-                DEX: 'DEX',
-                CON: 'CON',
-                INT: 'INT',
-                WIS: 'WIS',
-                CHA: 'CHA'
-            };
-
-            const statsDiv = document.getElementById('stats');
-            Object.entries(STAT_MAP).forEach(([abbr, key]) => {
-                const value = c.attributes[key];
-                const modifier = Math.floor((value - 10) / 2);
-                const modStr = modifier >= 0 ? `+${modifier}` : modifier;
-
-                const el = document.createElement('div');
-                el.className = 'stat-item';
-                el.innerHTML = `
-                            <div class="stat-label">${abbr}</div>
-                            <div class="stat-value">${value}</div>
-                            <div class="stat-modifier">${modStr}</div>
-                        `;
-                statsDiv.appendChild(el);
-            });
-
-            // Habilidades
-            const featuresList = document.getElementById('features-list');
-            c.features.forEach(f => {
-                const li = document.createElement('li');
-                li.className = 'feature-item';
-                li.innerHTML = `
-                            <div class="feature-name">${f.name}</div>
-                            <div class="feature-name">${f.type}</div>
-                            <div class="feature-desc">${f.description}</div>
-                        `;
-                featuresList.appendChild(li);
-            });
-            socket.emit("get_ac", {
-                actor_id: myCharacterId
-            });
-            console.log(ac)
-
-            // Equipo (placeholder)
-            const gearList = document.getElementById('gear-list');
-            gearList.innerHTML = `
-                        <li class="feature-item">
-                            <div class="feature-name">Arma Principal</div>
-                            <div class="feature-desc">${c.weapon || "Sin arma"}</div>
-                        </li>
-                        <li class="feature-item">
-                            <div class="feature-name">Armadura</div>
-                            <div class="feature-desc">${c.armor || "Sin armadura"}</div>
-                        </li>
-                        <li class="feature-item">
-                            <div class="feature-name">Escudo</div>
-                            <div class="feature-desc">${c.shield || "Sin escudo"}</div>
-                        </li>
-                    `;
-        })
-        .catch(err => console.error('Error loading character:', err));
+    // Pedir los datos del personaje
+    socket.emit("get_character_data", {
+        character_id: myCharacterId,
+        campaign_code: campaignCode
+    });
 }
 
 // Token Preview Functionality
@@ -537,7 +645,32 @@ document.addEventListener('mouseover', e => {
         </div>
     `;
 });
+function handleItemAction(action, itemId) {
+    if (action === 'use') {
+        socket.emit("toggle_equip_item", {
+            item_id: itemId,
+            character_id: myCharacterId,
+        });
 
+    }
+    else if (action === 'equip') {
+        socket.emit("toggle_equip_item", {
+            item_id: itemId,
+            character_id: myCharacterId,
+        });
+        console.log("Equipando objeto:", itemId);
+    }
+    else if (action === 'drop') {
+        socket.emit("drop_item", {
+            itemId: itemId,
+            characterId: myCharacterId,
+        });
+        console.log("Tirando objeto:", itemId);
+    }
+    else {
+        console.warn("Acción desconocida:", action);
+    }
+}
 document.addEventListener('mouseout', e => {
     const token = e.target.closest('.token');
 
@@ -795,16 +928,72 @@ function setupDMControls() {
         selectedToken = null;
     });
 }
-function hideLoader() {
-    const loader = document.getElementById("loading-screen");
-    loader.style.opacity = "0";
-    loader.style.transition = "opacity 0.3s ease";
+// ================================
+// LOADING SCREEN LOGIC
+// ================================
+const DD_QUOTES = [
+    "\"Un d20 decide el destino de héroes y dioses por igual.\"",
+    "\"El dungeon master no miente... solo improvisa la verdad.\"",
+    "\"No es una trampa si el bardo consigue un 20 en Persuasión.\"",
+    "\"Cada puerta cerrada es una oportunidad para el pícaro.\"",
+    "\"El grupo decidió dividirse. El dungeon master sonrió.\"",
+    "\"Un crítico en el peor momento posible... como siempre.\"",
+    "\"¿Negociar con el dragón? El clérigo tiró un 3. Buena suerte.\"",
+    "\"El mago dijo: 'Confíen en mí'. Nadie sobrevivió para arrepentirse.\"",
+    "\"El mapa decía 'aquí hay monstruos'. El grupo fue de todas formas.\"",
+    "\"Todo daño de fuego es culpa del hechicero. Sin excepciones.\"",
+    "\"Los héroes descansan un momento... el dungeon no descansa nunca.\"",
+    "\"El dado rueda. El destino espera. La taberna cierra pronto.\"",
+];
 
-    setTimeout(() => {
-        loader.remove();
-    }, 300);
+const LOADING_STEPS = [
+    "Generando el mundo...",
+    "Despertando a los monstruos...",
+    "Colocando trampas...",
+    "Escondiendo el tesoro...",
+    "Preparando al Dungeon Master...",
+    "¡Que comience la aventura!",
+];
+
+(function initLoadingScreen() {
+    const quoteEl = document.getElementById('loading-quote');
+    const barEl = document.getElementById('loading-bar');
+    const statusEl = document.getElementById('loading-status');
+
+    // Frase aleatoria inicial
+    quoteEl.textContent = DD_QUOTES[Math.floor(Math.random() * DD_QUOTES.length)];
+
+    // Rotar frases cada 3 s
+    const quoteInterval = setInterval(() => {
+        quoteEl.style.animation = 'none';
+        quoteEl.offsetHeight; // reflow
+        quoteEl.style.animation = '';
+        quoteEl.textContent = DD_QUOTES[Math.floor(Math.random() * DD_QUOTES.length)];
+    }, 3000);
+
+    // Simular progreso
+    let step = 0;
+    const totalSteps = LOADING_STEPS.length;
+
+    const progressInterval = setInterval(() => {
+        step++;
+        barEl.style.width = `${(step / totalSteps) * 100}%`;
+        statusEl.textContent = LOADING_STEPS[step - 1];
+
+        if (step >= totalSteps) {
+            clearInterval(progressInterval);
+            clearInterval(quoteInterval);
+            setTimeout(hideLoadingScreen, 600);
+        }
+    }, 500);
+})();
+
+function hideLoadingScreen() {
+    const screen = document.getElementById('loading-screen');
+    screen.style.transition = 'opacity 0.8s ease';
+    screen.style.opacity = '0';
+    setTimeout(() => screen.remove(), 800);
 }
-
 function openDMTab(name) {
     document.querySelectorAll('#dm-tab-map, #dm-tab-entities, #dm-tab-combat')
         .forEach(t => t.style.display = 'none');

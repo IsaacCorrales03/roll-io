@@ -167,13 +167,16 @@ class GameState:
         if not token["id"] in self.tokens:
             self.tokens[token["id"]] = token
 
+    def add_character(self, character: Actor):
+        if not character.id in self.characters:
+            self.characters[character.id] = character
     def move_token(self, token_id: UUID, x: int, y: int):
         token = self.tokens[token_id]
         if not token:
             raise RuntimeError("Token no existe")
         token["x"] = x
         token["y"] = y
-        print("token moved in state:", token, "New position:", x, y)
+
 
 
 def LongRestEvent(actor_id):

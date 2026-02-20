@@ -332,7 +332,6 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
 
     @app.route("/game")
     def game():
-        start = time.perf_counter()
         code = request.args.get("code")
         if not code or code not in campaigns_dict:
             return "Campaña no válida", 400
@@ -340,7 +339,6 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
             "game.html",
             code=code,
         )
-        print("TOTAL: ", time.perf_counter() - start, "seconds")
         return response
 
     

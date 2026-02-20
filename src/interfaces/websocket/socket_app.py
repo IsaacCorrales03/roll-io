@@ -6,8 +6,10 @@ Handles all real-time socket communication events
 from uuid import UUID, uuid4
 from flask import request
 from flask_socketio import emit, join_room
+from numpy import character
 
 # Models and queries
+from src.core.character.character import Character
 from src.shared.utils.game_state_builder import build_game_state
 from src.core.game.Event import MoveTokenEvent, Event
 from src.core.game.querys import GetArmorClass, GetEntities
@@ -27,7 +29,8 @@ def register_socket_handlers(
     auth_service: AuthService,
     campaign_repo: MySQLCampaignRepository,
     character_repo: CharacterRepository
-):
+):  
+    
     """
     Register all WebSocket event handlers
     
@@ -41,7 +44,7 @@ def register_socket_handlers(
         campaign_repo: Campaign repository
         character_repo: Character repository
     """
-
+    
     def get_game_state(campaign_code: str):
         """Helper to get or create game state"""
         from src.shared.utils.game_state_builder import build_game_state
@@ -244,7 +247,6 @@ def register_socket_handlers(
         event = MoveTokenEvent(token_id=token_id, x=x, y=y)  # type: ignore
         try:
             state.dispatch(event)
-            print("Emitting token move:", token_id, x, y)
             
             emit("token_moved", {
                 "token_id": token_id,
@@ -261,8 +263,7 @@ def register_socket_handlers(
 
         code = data.get("code")
         session_id = request.cookies.get("session_id")
-        from flask import current_app
-        services = current_app.extensions["services"]
+
 
         if not code or code not in campaigns_dict:
             emit("load_game_error", {"error": "Campaña no válida"})
@@ -291,6 +292,8 @@ def register_socket_handlers(
         # -------------------------
         # WORLD
         # -------------------------
+        from flask import current_app
+        services = current_app.extensions["services"]
         world = services["world_service"].get_by_id(campaign_instance["world_id"])
         if not world:
             emit("load_game_error", {"error": "Mundo no encontrado"})
@@ -390,8 +393,6 @@ def register_socket_handlers(
             traceback.print_exc()
             emit("error", {"message": str(e)})
             return
-        print(result)
-        print()
         characters = [
             {
                 "id": str(char.id),
@@ -469,3 +470,69 @@ def register_socket_handlers(
             normalize_token(token)
             for token in tokens
         ])
+
+    @socketio.on("toggle_equip_item")
+    def toggle_equip_item(data):
+
+        character_id = data.get("character_id")
+        item_id = data.get("item_id")
+        if not character_id or not item_id:
+            emit("error", {"message": "Invalid payload"})
+            return
+
+        campaign_code = socket_campaigns_dict.get(request.sid) #type: ignore
+        if not campaign_code:
+            emit("error", {"message": "Campaign not found"})
+            return
+
+        state = get_game_state(campaign_code)
+
+        character: Character = state.characters.get(UUID(character_id))
+        if not character:
+            emit("error", {"message": "Character not found"})
+            return
+
+        target_instance = None
+
+        for instance in character.inventory:
+            if instance.item.item_id == item_id:
+                target_instance = instance
+                break
+        if not target_instance:
+            emit("error", {"message": "Item not found"})
+            return
+        # 🔥 Delegar al dominio
+        if target_instance.equipped:
+            character.unequip(target_instance)
+        else:
+            character.equip(target_instance)
+        # Persistir
+        from flask import current_app
+        services = current_app.extensions["services"]
+        character_service = services["character_service"]
+        character_service.save(character)
+
+        emit("item_equipped_toggled", {
+            "character_id": character_id,
+            "item_id": item_id,
+            "equipped": target_instance.equipped
+        }, to=campaign_code)
+
+    @socketio.on("get_character_data")
+    def handle_get_character_data(data):
+        character_id = data.get("character_id")
+        if not character_id:
+            emit("error", {"message": "Invalid payload"})
+            return
+
+        code = data.get("campaign_code")
+        if not code or code not in campaigns_dict:
+            emit("error", {"message": "Campaign not found"})
+            return
+        state = get_game_state(code)
+
+        character = state.characters.get(UUID(character_id))
+        if not character:
+            emit("error", {"message": "Character not found"})
+            return
+        emit("character_data_received", character.to_json())

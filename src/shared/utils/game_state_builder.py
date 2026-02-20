@@ -23,7 +23,15 @@ def build_game_state(campaign_code: str, campaigns, character_repository) -> Gam
             continue
 
         character = json_to_character(data)
+
+        # 🔥 Cargar inventario desde DB
+        inventory_rows = character_repository.get_inventory(char_id)
+
+        # Delegar al dominio
+        character.load_inventory(inventory_rows)
+
         characters[character.id] = character
+
 
     state = GameState(
         characters=characters,

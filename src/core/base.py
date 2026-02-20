@@ -4,9 +4,9 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 import random
-from .items.weapon import Weapon
 from uuid import UUID
-
+from src.core.items.item import Armor, ItemInstance, Shield
+from src.core.items.items import Weapon
 
 
 class BaseEntity(ABC):
@@ -78,8 +78,9 @@ class Actor(ABC):
         self.active_effects = []
         self.features = []
         self.armor = None
-        self.shield = None
-        self.weapon: Optional[Weapon]
+        self.shield: Optional[Shield] = None
+        self.weapon: Optional[Weapon] = None
+        self.armor: Optional[Armor] = None
         self.hp = 0
         self.level = 0
         self.max_hp = 0
@@ -88,27 +89,49 @@ class Actor(ABC):
         self.inspiration_dice = {}  # key: ClassFeature instance, value: dict con 'die' y 'turns_left'
         self.status: dict = {}
         self.current_location = ""
+    
     def calc_ac(self) -> int:
         """ Esta función se encarga de calcular y devolver el AC de un actor"""
         ac = 10 + self.dex_mod
+        if self.armor:
+            ac = self.armor.base_ac + self.dex_mod
         # Escudo
         if self.shield:
-            ac += self.shield.bonus
-
+            ac += self.shield.ac_bonus
+        
         # Efectos activos
         for effect in self.active_effects:
             ac += effect.ac_bonus(self)
 
         return ac
 
-    def equip(self, armor=None, weapon=None):
-        """
-        Función para equipar un arma u armadura en un actor
-        """
-        if armor:
-            self.armor = armor
-        if weapon:
-            self.weapon = weapon
+    def equip(self, instance: "ItemInstance"):
+        item_type = instance.item.item_type
+        if item_type == "weapon":
+            self.weapon = instance.item #type: ignore  # ⚡ guardar solo el Weapon
+        elif item_type == "armor":
+            self.armor = instance.item #type: ignore 
+        elif item_type == "shield":
+            self.shield = instance.item #type: ignore 
+        else:
+            raise ValueError(f"Item type '{item_type}' cannot be equipped")
+
+        instance.equipped = True
+
+    
+    def unequip(self, instance):
+        item_type = instance.item.item_type
+        if item_type == "weapon" and self.weapon == instance.item:
+            self.weapon = None
+
+        elif item_type == "armor" and self.armor == instance.item:
+            self.armor = None
+
+        elif item_type == "shield" and self.shield == instance.item:
+            self.shield = None
+
+        instance.equipped = False
+
 
     def calculate_base_ac(self):
         self.base_ac = self.calc_ac()

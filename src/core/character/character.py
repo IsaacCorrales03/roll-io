@@ -1,7 +1,10 @@
+from typing import Optional
+
+from src.core.items.item import ItemInstance, Weapon
+
 from ..base import Actor
 from .ClassFeature import ClassFeature
 from .race import Race, ATTRIBUTE_KEYS
-from ..items.weapon import Weapon
 from .dndclass import DnDClass
 import random
 import uuid
@@ -30,8 +33,7 @@ class Character(Actor):
         self.points = 0
 
         # Rasgos especiales raciales
-        self.special_triats = race.special_traits.copy()
-
+        self.special_traits = race.special_traits.copy()
         # Competencias con armas según la clase
         self.weapon_proficiencies = dnd_class.weapon_proficiencies.copy()
         # Puntos de vida iniciales
@@ -45,6 +47,8 @@ class Character(Actor):
         self.features: list[ClassFeature] = []
         self.status: dict = {}
         self.apply_level_features()
+        self.inventory: list[ItemInstance] = []
+        self.max_weight = self.attributes["STR"] * 15
 
     def can_levelUp(self):
         # Verifica si aún puede subir de nivel
@@ -82,6 +86,7 @@ class Character(Actor):
 
         self.attributes[attribute] += value
         self.points -= value
+        self.max_weight = self.attributes["STR"] * 15
         return True
 
     def roll_hit_die(self, hit_die: int, con_mod: int, use_average=False):
@@ -99,10 +104,60 @@ class Character(Actor):
             # 2) Registrar la feature en el actor
             self.features.append(feature)
 
+    def current_weight(self) -> float:
+        return sum(
+            item.item.weight * item.quantity
+            for item in self.inventory
+        )
+    
+    def can_carry(self, item_instance: "ItemInstance") -> bool:
+        new_weight = item_instance.item.weight * item_instance.quantity
+        return self.current_weight() + new_weight <= self.max_weight
+    
+    def add_item(self, item_instance: "ItemInstance") -> bool:
+        if not self.can_carry(item_instance):
+            return False
+
+        if item_instance.item.stackable:
+            for existing in self.inventory:
+                if existing.item.item_id == item_instance.item.item_id:
+                    existing.quantity += item_instance.quantity
+                    return True
+
+        self.inventory.append(item_instance)
+        return True
+
+    def load_inventory(self, items_data: list[dict]) -> None:
+        from src.core.items.items import ITEMS
+
+        self.inventory.clear()
+
+        for entry in items_data:
+            item = ITEMS.get(entry["item_id"])
+            if not item:
+                continue
+
+            instance = ItemInstance(
+                item=item,
+                quantity=entry.get("quantity", 1),
+            )
+
+            instance.equipped = entry.get("equipped", False)
+
+            self.add_item(instance)
+
+            # Equipar si estaba marcado como equipado
+            if instance.equipped:
+                self.equip(instance)
+
+
+
+
+
     def to_json(self) -> dict:
         # Serialización del personaje para API / frontend
         return {
-            "id": self.id,
+            "id": str(self.id),
             "name": self.name,
             "level": self.level,
             "race": {
@@ -123,6 +178,28 @@ class Character(Actor):
                 "current": self.hp,
                 "max": self.max_hp,
             },
+            "weapon": {
+                "name": self.weapon.name if self.weapon else None,
+                "description": self.weapon.description if self.weapon else None,
+                "damage_type": self.weapon.damage_type if self.weapon else None,
+                "dice_count": self.weapon.dice_count if self.weapon else None,
+                "dice_size": self.weapon.dice_size if self.weapon else None,
+                "bonus": self.weapon.bonus if self.weapon else None,
+                "attribute": self.weapon.attribute if self.weapon else None,
+            },
+            "armor": {
+                "name": self.armor.name if self.armor else None,
+                "description": self.armor.description if self.armor else None,
+                "base_ac": self.armor.base_ac if self.armor else None,
+                "dex_bonus": self.armor.dex_bonus if self.armor else None,  
+                "dex_bonus_limit": self.armor.dex_bonus_limit if self.armor else None,
+                "stealth_disadvantage": self.armor.stealth_disadvantage if self.armor else None,
+            },
+            "shield": {
+                "name": self.shield.name if self.shield else None,
+                "description": self.shield.description if self.shield else None,
+                "ac_bonus": self.shield.ac_bonus if self.shield else None,
+            },
             "proficiency_bonus": self.proficiency_bonus,
             "features": [
                 {
@@ -133,8 +210,27 @@ class Character(Actor):
                 }
                 for f in self.features
             ],
-            "texture": self.texture
+            "texture": self.texture,
+            "inventory": [
+                {
+                    "item_id": str(instance.item.item_id),
+                    "quantity": instance.quantity,
+                    "equipped": instance.equipped,
+                    "durability": instance.durability,
+                    "meta": {
+                        "name": instance.item.name,
+                        "weight": instance.item.weight,
+                        "description": instance.item.description,
+                        "item_type": instance.item.item_type,
+                    }
+                }
+                for instance in self.inventory
+            ],
+            "max_weight": self.max_weight,
+            "current_weight": self.current_weight(),
+
         }
+    
     @classmethod
     def from_dict(
         cls,
@@ -183,7 +279,7 @@ class Character(Actor):
                 feature.level = lvl
                 feature.type = feature_cls.type
                 char.features.append(feature)
-
+        char.load_inventory(data.get("inventory", []))
         return char
 
 

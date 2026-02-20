@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/game.css') }}">
     <style>
-        
+
     </style>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
@@ -15,9 +15,30 @@
 </head>
 
 <body class="bg-slate-950 text-white">
-<div id="loading-screen">
-    <div class="loader">Cargando...</div>
-</div>
+    <div id="loading-screen">
+        <div class="loading-blobs">
+            <div class="loading-blob" id="blob1"></div>
+            <div class="loading-blob" id="blob2"></div>
+        </div>
+
+        <div class="loading-content">
+            <!-- Logo / Ícono -->
+            <div class="loading-icon">⚔️</div>
+
+            <!-- Título -->
+            <h1 class="loading-title">CHRONICLE<span>20</span></h1>
+            <div class="loading-divider"></div>
+
+            <!-- Frase aleatoria -->
+            <p class="loading-quote" id="loading-quote">Preparando los dados del destino...</p>
+
+            <!-- Barra de progreso -->
+            <div class="loading-bar-track">
+                <div class="loading-bar-fill" id="loading-bar"></div>
+            </div>
+            <p class="loading-status" id="loading-status">Cargando mundo...</p>
+        </div>
+    </div>
 
     <!-- Animated background blobs -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none" style="z-index: 0;">
@@ -111,16 +132,15 @@
                 <button onclick="openTab('info')" class="tab-btn active" id="tab-btn-info">Info</button>
                 <button onclick="openTab('gear')" class="tab-btn" id="tab-btn-gear">Equipo</button>
                 <button onclick="openTab('features')" class="tab-btn" id="tab-btn-features">Habilidades</button>
+                <button onclick="openTab('inventory')" class="tab-btn" id="tab-btn-inventory">Inventario</button>
             </div>
 
             <!-- TAB: Info -->
             <div id="tab-info" class="tab">
-                <h3 id="char-name"
-                    class="text-3xl font-bold mb-2 bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                </h3>
+                <h2 id="char-name"></h3>
                 <p id="char-meta" class="text-sm text-slate-400 mb-6 font-medium"></p>
 
-                <div class="section-title">HP & Recursos</div>
+                <div class="section-title">HP &amp; Recursos</div>
                 <div class="hp-ac-grid">
                     <div class="hp-item">
                         <div class="stat-label">Puntos de Vida</div>
@@ -132,8 +152,32 @@
                     </div>
                 </div>
 
+                <!-- Peso -->
+                <div class="weight-row">
+                    <div style="flex: 1;">
+                        <div class="weight-label">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" style="opacity:.5">
+                                <path
+                                    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                            </svg>
+                            Peso Máximo a Cargar
+                        </div>
+                        <div class="weight-bar-wrap">
+                            <div class="weight-bar-fill" id="weight-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div id="char-weight" style="margin-left: 12px; white-space: nowrap;">-- / -- lb</div>
+                </div>
+
                 <div class="section-title">Atributos</div>
                 <div id="stats" class="stat-grid"></div>
+            </div>
+
+            <!-- TAB: Inventory -->
+            <div id="tab-inventory" class="tab" style="display: none;">
+                <div class="section-title">Inventario</div>
+                <ul id="inventory-list" class="feature-list"></ul>
             </div>
 
             <!-- TAB: Gear -->
@@ -177,7 +221,6 @@
                     <input type="text" id="enemy-name" placeholder="Nombre">
                     <input type="number" id="enemy-hp" placeholder="HP">
                     <input type="number" id="enemy-max-hp" placeholder="Max HP">
-                    <input type="file" id="enemy-asset" accept="image/*">
                     <input type="number" id="enemy-ac" placeholder="Clase de Armadura">
                     <select id="enemy-size">
                         <option value="1x1">1x1</option>
@@ -185,6 +228,7 @@
                         <option value="2x2">2x2</option>
                         <option value="3x3">3x3</option>
                     </select>
+                    <input type="file" id="enemy-asset" accept="image/*">
                     <button onclick="createEnemy()">Crear y Añadir al Mapa</button>
                 </div>
 

@@ -1,6 +1,8 @@
 import uuid
 from typing import Optional
 
+from src.core.items.items import ITEMS
+from src.core.items.item import ItemInstance
 from src.core.character.character import Character
 from src.core.character.race import RACE_MAP
 from src.core.character.dndclass import CLASS_MAP
@@ -25,10 +27,44 @@ class CharacterService:
         else:
             character.texture = f"imgs/{class_key}.jpg" # type: ignore
         self.repo.create(character.to_json(), owner_id, token_texture)
+        self.repo.save_inventory(str(character.id), {})
         return character
+        
+    def save(self, character: Character):
+        data = character.to_json()
+        self.repo.save(data, character.owner_id)
 
+        inventory_dict: dict[str, dict] = {}
+
+        for instance in character.inventory:
+            iid = instance.item.item_id
+
+            if iid not in inventory_dict:
+                inventory_dict[iid] = {
+                    "quantity": 0,
+                    "equipped": False
+                }
+
+            inventory_dict[iid]["quantity"] += instance.quantity
+
+            # Si alguna instancia está equipada → marcar
+            if getattr(instance, "equipped", False):
+                inventory_dict[iid]["equipped"] = True
+
+        self.repo.save_inventory(str(character.id), inventory_dict)
+
+        
     def load(self, from_id: str) -> Optional[Character]:
         data = self.repo.get_by_id(from_id)
         if data is None:
             return None
-        return json_to_character(data)
+
+        character = json_to_character(data)
+
+        # ahora devuelve lista de dicts
+        inventory_rows = self.repo.get_inventory(from_id)
+
+        # delegas directamente
+        character.load_inventory(inventory_rows)
+
+        return character

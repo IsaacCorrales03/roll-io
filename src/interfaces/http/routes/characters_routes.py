@@ -74,8 +74,12 @@ def create_character():
             import traceback
             traceback.print_exc()
     except KeyError:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": "Raza o clase inválida"}), 400
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
     return jsonify({

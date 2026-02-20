@@ -78,7 +78,7 @@ class CharacterRepository:
         with self.db.cursor() as cursor:
             cursor.execute(
                 "SELECT 1 FROM characters WHERE id = %s",
-                (character["id"],)
+                (str(character["id"]),)
             )
             exists = cursor.fetchone() is not None
 
@@ -98,7 +98,7 @@ class CharacterRepository:
                         hp = %s,
                         max_hp = %s,
                         owner_id = %s,
-                        token_texture = %s
+                        texture = %s
 
                     WHERE id = %s
                 """, (
@@ -115,8 +115,8 @@ class CharacterRepository:
                     character["hp"]["current"],
                     character["hp"]["max"],
                     str(owner_id),
-                    character["id"],
-                    character["token_texture"]
+                    str(character["id"]),
+                    character["texture"]
                 ))
             else:
                 cursor.execute("""
@@ -146,4 +146,38 @@ class CharacterRepository:
 
         self.db.commit()
         return character["id"]
+
+
+    def save_inventory(self, character_id: str, inventory: dict[str, dict]):
+        with self.db.cursor() as cursor:
+
+            cursor.execute(
+                "DELETE FROM character_inventory WHERE character_id = %s",
+                (character_id,)
+            )
+
+            for item_id, data in inventory.items():
+                cursor.execute("""
+                    INSERT INTO character_inventory
+                    (id, character_id, item_id, quantity, equipped)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    str(uuid.uuid4()),       # <--- id obligatorio
+                    character_id,
+                    item_id,
+                    data["quantity"],
+                    data.get("equipped", False)
+                ))
+
+
+        self.db.commit()
+
+
+    def get_inventory(self, character_id: str):
+        with self.db.cursor(dictionary=True) as cursor:
+            cursor.execute(
+                "SELECT item_id, quantity, equipped FROM character_inventory WHERE character_id = %s",
+                (character_id,)
+            )
+            return cursor.fetchall()
 

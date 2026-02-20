@@ -173,7 +173,6 @@ class TokenMovedHandler(EventHandler):
     def handle(self, event: Event, state: GameState) -> None:
         if event.type != "token_moved":
             return
-        print("Handling token move event:", event.payload)
         state.move_token(event.payload["token_id"], event.payload["x"], event.payload["y"])
 
 class SpatialActionValidator(EventHandler):
@@ -222,7 +221,6 @@ class CreateEnemyHandler(EventHandler):
             texture_url=enemy.asset_url,
             label=enemy.name
         )
-        print("Adding token to state:", enemy_token.to_dict())
         state.add_token(enemy_token.to_dict())
 
         state.dispatch(Event(
