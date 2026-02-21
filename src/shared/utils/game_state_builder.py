@@ -32,7 +32,7 @@ def build_game_state(campaign_code: str, campaigns, character_repository) -> Gam
 
         characters[character.id] = character
 
-
+    
     state = GameState(
         characters=characters,
         current_turn=1,

@@ -1,5 +1,6 @@
 from typing import Optional
-
+import mysql.connector
+from src.shared.database.db_config import DB_DSN
 
 class DatabaseService:
     def __init__(self, conn):
@@ -16,8 +17,6 @@ class DatabaseService:
 
 
 def create_db_service() -> DatabaseService:
-    import mysql.connector
-    from src.shared.database.db_config import DB_DSN
-
     conn = mysql.connector.connect(**DB_DSN)
+    conn.autocommit = True  # type: ignore
     return DatabaseService(conn)

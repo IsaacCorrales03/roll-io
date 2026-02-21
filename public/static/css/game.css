@@ -1400,3 +1400,89 @@ body {
   border: 1px dashed rgba(148, 163, 184, 0.15);
   border-radius: 8px;
 }
+.item-actions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: 1px solid #a855f7;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #3b1f6e, #6d28d9);
+    color: #e9d5ff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 2px 8px rgba(109, 40, 217, 0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+    letter-spacing: 0.03em;
+}
+
+.item-actions button:hover {
+    background: linear-gradient(135deg, #4c1d95, #7c3aed);
+    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.6), inset 0 1px 0 rgba(255,255,255,0.12);
+    transform: translateY(-1px);
+}
+
+.item-actions button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(109, 40, 217, 0.3);
+}
+.item-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.tab {
+    overflow-y: auto;
+    max-height: calc(100vh - 120px); /* ajusta según la altura de tus tab-buttons */
+    padding-right: 4px; /* evita que el scrollbar tape contenido */
+}
+
+/* Scrollbar personalizado (opcional pero queda mucho mejor) */
+.tab::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tab::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tab::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.tab::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+#item-search {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #f1f5f9;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+#item-search::placeholder {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+#item-search:hover {
+    border-color: rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.16);
+}
+
+#item-search:focus {
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.3), 0 0 12px rgba(167, 139, 250, 0.2);
+    background: rgba(255, 255, 255, 0.18);
+}
+

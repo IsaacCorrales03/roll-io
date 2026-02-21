@@ -7,7 +7,7 @@ let current_section_offset_y;
 
 let isDM;
 let myCharacterId;
-
+let dm_player_list = [];
 /* ================================
    SOCKET.IO - CONEXIÓN
 ================================ */
@@ -17,6 +17,7 @@ window.onload = () => {
     socket.on('connect', () => {
         console.log('✅ Socket conectado');
         socket.emit('join_campaign', { code: campaignCode });
+
         socket.emit("load_game_resources", { code: campaignCode });
 
     });
@@ -25,6 +26,42 @@ window.onload = () => {
         console.log('👋 Jugador se unió:', d);
         // TODO: Actualizar lista de jugadores/tokens
     });
+socket.on('items_result', data => {
+    const items = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : [];
+    const container = document.getElementById('dm-item-list');
+    container.innerHTML = '';
+
+    if (items.length === 0) {
+        container.innerHTML = '<div style="color:#888;">Sin items disponibles</div>';
+        return;
+    }
+
+    items.forEach(item => {
+        const type = item.meta.item_type?.toLowerCase() || '';
+        const li = document.createElement('div');
+        li.className = 'item-card feature-item';
+        li.dataset.itemId = item.item_id || item.instance_id;
+
+        li.innerHTML = `
+            <div class="item-header">
+                <div class="feature-name">${item.meta.name}</div>
+                <div class="item-type-badge type-${type}">${item.meta.item_type}</div>
+            </div>
+            <div class="feature-desc">${item.meta.description}</div>
+            <div class="item-meta">
+                ${item.meta.weight ? `<span>Peso: <strong>${item.meta.weight} lb</strong></span>` : ''}
+                ${item.equipped ? `<span class="equipped-badge">Equipado</span>` : ''}
+            </div>
+            <div class="item-actions">
+                <button onclick="giveItemToPlayer('${item.item_id || item.instance_id}', '${item.meta.name}')" ...> Dar Item</button>
+            </div>
+        `;
+
+        container.appendChild(li);
+    });
+});
+
+
     socket.on('game_resources_loaded', d => {
         isDM = d.is_dm;
         myCharacterId = d.my_character_id;
@@ -58,9 +95,8 @@ window.onload = () => {
         // TODO: Actualizar lista de jugadores/tokens
     });
     socket.on('item_equipped_toggled', d => {
-        console.log('🔄 Equip toggled:', d);
-        socket.emit("get_character_data", { character_id: myCharacterId, campaign_code: campaignCode });
-        
+        socket.emit("get_character_data", { character_id: myCharacterId, campaign_code: campaignCode })
+
     });
     socket.on('chat_message', data => {
         const el = document.createElement('div');
@@ -109,7 +145,6 @@ window.onload = () => {
     });
 
     socket.on("ac_result", (data) => {
-        console.log("AC:", data.value);
         document.getElementById('char-ac').textContent = data.value || '--';
 
     });
@@ -135,9 +170,11 @@ window.onload = () => {
             updateGridState(data.id, null, null, data.x, data.y);
         });
     });
+    socket.on("inventory_updated", d => {
+        renderCharacterGearAndInventory(d)
+    }
+    )
     socket.on("character_data_received", c => {
-        console.log("Character data:", c);
-
         // Nombre en dorado
         const nameEl = document.getElementById('char-name');
         nameEl.textContent = c.name;
@@ -226,54 +263,70 @@ window.onload = () => {
         });
 
         // Equipo
-        const gearList = document.getElementById('gear-list');
-        gearList.innerHTML = `
+        renderCharacterGearAndInventory(c)
+    });
+
+
+    // Inicializar el resto de la UI
+};
+document.getElementById('item-search').addEventListener('input', e => {
+    const filter = e.target.value.toLowerCase();
+    document.querySelectorAll('#dm-item-list .item-card').forEach(card => {
+        const name = card.querySelector('.feature-name').textContent.toLowerCase();
+        const type = card.querySelector('.item-type-badge')?.textContent.toLowerCase() || '';
+        card.style.display = name.includes(filter) || type.includes(filter) ? 'block' : 'none';
+    });
+});
+function renderCharacterGearAndInventory(character) {
+    // --- Render Gear ---
+    const gearList = document.getElementById('gear-list');
+    gearList.innerHTML = `
         <li class="feature-item">
             <div class="feature-name">Arma Principal</div>
             <div class="feature-desc">
-                ${c.weapon?.name
-                        ? `<strong>${c.weapon.name}</strong>
-                    <br>${c.weapon.dice_count}${c.weapon.dice_size}${c.weapon.bonus ? ` +${c.weapon.bonus}` : ''} ${c.weapon.damage_type}
-                    ${c.weapon.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
-                        : "Sin arma"}
+                ${character.weapon?.name
+            ? `<strong>${character.weapon.name}</strong>
+                       <br>${character.weapon.dice_count}${character.weapon.dice_size}${character.weapon.bonus ? ` +${character.weapon.bonus}` : ''} ${character.weapon.damage_type}
+                       ${character.weapon.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
+            : "Sin arma"}
             </div>
         </li>
         <li class="feature-item">
             <div class="feature-name">Armadura</div>
             <div class="feature-desc">
-                ${c.armor?.name
-                        ? `<strong>${c.armor.name}</strong>
-                    <br>AC: ${c.armor.base_ac} ${c.armor.dex_bonus ? `(DEX aplica)` : ''}
-                    ${c.armor.stealth_disadvantage ? '<span class="stealth-badge">Desventaja Sigilo</span>' : ''}
-                    ${c.armor.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
-                        : "Sin armadura"}
+                ${character.armor?.name
+            ? `<strong>${character.armor.name}</strong>
+                       <br>AC: ${character.armor.base_ac} ${character.armor.dex_bonus ? `(DEX aplica)` : ''}
+                       ${character.armor.stealth_disadvantage ? '<span class="stealth-badge">Desventaja Sigilo</span>' : ''}
+                       ${character.armor.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
+            : "Sin armadura"}
             </div>
         </li>
         <li class="feature-item">
             <div class="feature-name">Escudo</div>
             <div class="feature-desc">
-                ${c.shield?.name
-                        ? `<strong>${c.shield.name}</strong>
-                    <br>AC Bonus: ${c.shield.ac_bonus}
-                    ${c.shield.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
-                        : "Sin escudo"}
+                ${character.shield?.name
+            ? `<strong>${character.shield.name}</strong>
+                       <br>AC Bonus: ${character.shield.ac_bonus}
+                       ${character.shield.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
+            : "Sin escudo"}
             </div>
         </li>
-        `;
+    `;
 
+    // --- Render Inventory ---
+    const inventoryList = document.getElementById('inventory-list');
+    inventoryList.innerHTML = '';
+    if (character.inventory && character.inventory.length > 0) {
+        character.inventory.forEach(item => {
+            const type = item.meta.item_type?.toLowerCase();
+            const isEquippable = ['weapon', 'armor', 'shield'].includes(type);
+            const isConsumable = type === 'consumable';
 
-        // Inventario
-        const inventoryList = document.getElementById('inventory-list');
-        inventoryList.innerHTML = '';
-        if (c.inventory && c.inventory.length > 0) {
-            c.inventory.forEach(item => {
-                const type = item.meta.item_type?.toLowerCase();
-                const isEquippable = ['weapon', 'armor', 'shield'].includes(type);
-                const isConsumable = type === 'consumable';
-                const li = document.createElement('li');
-                li.className = 'feature-item item-card';
-                li.dataset.itemId = item.id;
-                li.innerHTML = `
+            const li = document.createElement('li');
+            li.className = 'feature-item item-card';
+            li.dataset.itemId = item.item_id || item.id;
+            li.innerHTML = `
                 <div class="item-header">
                     <div class="feature-name">${item.meta.name}</div>
                     <div class="item-type-badge type-${type}">${item.meta.item_type}</div>
@@ -303,16 +356,12 @@ window.onload = () => {
                     </button>
                 </div>
             `;
-                inventoryList.appendChild(li);
-            });
-        } else {
-            inventoryList.innerHTML = '<li class="feature-item">Sin objetos en el inventario.</li>';
-        }
-    });
-
-
-    // Inicializar el resto de la UI
-};
+            inventoryList.appendChild(li);
+        });
+    } else {
+        inventoryList.innerHTML = '<li class="feature-item">Sin objetos en el inventario.</li>';
+    }
+}
 function createTokenElement(data) {
     const token = document.createElement("div");
     console.log("Creating token element with data:", data);
@@ -647,9 +696,8 @@ document.addEventListener('mouseover', e => {
 });
 function handleItemAction(action, itemId) {
     if (action === 'use') {
-        socket.emit("toggle_equip_item", {
-            item_id: itemId,
-            character_id: myCharacterId,
+        socket.emit("save_and_exit", {
+            campaign_code: campaignCode,
         });
 
     }
@@ -658,12 +706,10 @@ function handleItemAction(action, itemId) {
             item_id: itemId,
             character_id: myCharacterId,
         });
-        console.log("Equipando objeto:", itemId);
     }
     else if (action === 'drop') {
-        socket.emit("drop_item", {
-            itemId: itemId,
-            characterId: myCharacterId,
+        socket.emit("save_and_exit", {
+            campaign_code: campaignCode,
         });
         console.log("Tirando objeto:", itemId);
     }
@@ -807,9 +853,10 @@ function renderDMEntities(data) {
     data.characters.forEach(char => {
         const hpPercent = Math.round((char.hp / char.max_hp) * 100);
         const hpColor = hpPercent > 50 ? '#4caf50' : hpPercent > 25 ? '#ff9800' : '#f44336';
-
+        dm_player_list.push(char)
         const li = document.createElement('li');
         li.className = 'feature-item';
+        li.dataset.charId = char.id; // ← añadir
         li.innerHTML = `
             <div class="entity-header">
                 <span class="entity-name">${char.name}</span>
@@ -835,6 +882,7 @@ function renderDMEntities(data) {
 
         const li = document.createElement('li');
         li.className = 'feature-item';
+        li.dataset.charId = char.id;
         li.innerHTML = `
             <div class="entity-header">
                 <span class="entity-name">${enemy.name}</span>
@@ -995,13 +1043,73 @@ function hideLoadingScreen() {
     setTimeout(() => screen.remove(), 800);
 }
 function openDMTab(name) {
-    document.querySelectorAll('#dm-tab-map, #dm-tab-entities, #dm-tab-combat')
+    // Añade dm-tab-items aquí:
+    document.querySelectorAll('#dm-tab-map, #dm-tab-entities, #dm-tab-combat, #dm-tab-items')
         .forEach(t => t.style.display = 'none');
 
     document.getElementById(`dm-tab-${name}`).style.display = 'block';
 
-    document.querySelectorAll('#dm-tab-btn-map, #dm-tab-btn-entities, #dm-tab-btn-combat')
+    // Añade dm-tab-btn-items aquí:
+    document.querySelectorAll('#dm-tab-btn-map, #dm-tab-btn-entities, #dm-tab-btn-combat, #dm-tab-btn-items')
         .forEach(b => b.classList.remove('active'));
 
     document.getElementById(`dm-tab-btn-${name}`).classList.add('active');
+
+    if (name === 'items') {
+        socket.emit('get_items');
+    }
+}
+let _pendingGiveItemId = null;
+
+
+function openGiveItemPopup(itemId, itemName) {
+  _pendingGiveItemId = itemId;
+
+  document.getElementById('give-item-name').textContent = `Objeto: ${itemName || itemId}`;
+
+  const playerListEl = document.getElementById('give-item-player-list');
+  playerListEl.innerHTML = '';
+
+  if (dm_player_list.length === 0) {
+    playerListEl.innerHTML = '<p style="color:#888; font-size:0.85rem;">Sin jugadores conectados.</p>';
+  } else {
+    dm_player_list.forEach(char => {
+      const btn = document.createElement('button');
+      btn.style.cssText = `
+        background:#0d1117; border:1px solid #d4a853; color:#d4a853;
+        padding:10px 14px; border-radius:8px; cursor:pointer;
+        font-family:'Cinzel',serif; font-size:0.9rem; text-align:left;
+        transition:background 0.2s; width:100%;
+      `;
+      btn.textContent = `🧙 ${char.name}`;
+      btn.onmouseover = () => btn.style.background = '#1f1a0e';
+      btn.onmouseout  = () => btn.style.background = '#0d1117';
+      btn.onclick = () => confirmGiveItem(char.id, char.name);
+      playerListEl.appendChild(btn);
+    });
+  }
+
+  document.getElementById('give-item-overlay').style.display = 'flex';
+}
+
+function closeGiveItemPopup() {
+  document.getElementById('give-item-overlay').style.display = 'none';
+  _pendingGiveItemId = null;
+}
+
+function confirmGiveItem(targetCharId, targetName) {
+  if (!_pendingGiveItemId || !targetCharId) return;
+
+  socket.emit('dm_give_item', {
+    campaign_code: campaignCode,
+    item_instance_id: _pendingGiveItemId,
+    target_player_id: targetCharId,
+  });
+
+    closeGiveItemPopup();
+}
+
+// Reemplaza la función anterior
+function giveItemToPlayer(itemId, itemName) {
+  openGiveItemPopup(itemId, itemName);
 }

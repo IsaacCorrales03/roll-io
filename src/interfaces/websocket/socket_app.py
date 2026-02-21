@@ -9,6 +9,7 @@ from flask_socketio import emit, join_room
 from numpy import character
 
 # Models and queries
+from src.shared.utils.items_utils import serialize_item_instance, item_instances, ItemInstance
 from src.core.character.character import Character
 from src.shared.utils.game_state_builder import build_game_state
 from src.core.game.Event import MoveTokenEvent, Event
@@ -506,17 +507,36 @@ def register_socket_handlers(
             character.unequip(target_instance)
         else:
             character.equip(target_instance)
-        # Persistir
-        from flask import current_app
-        services = current_app.extensions["services"]
-        character_service = services["character_service"]
-        character_service.save(character)
 
         emit("item_equipped_toggled", {
             "character_id": character_id,
             "item_id": item_id,
             "equipped": target_instance.equipped
         }, to=campaign_code)
+
+    @socketio.on("update_character_inventory")
+    def update_character_inventory(data):
+        character_id = data.get("character_id", None)
+        if not character_id:
+            emit("error", {"message":"Character not found"})
+            return
+        code = data.get("campaign_code")
+        if not code:
+            emit("error", {"message": "Campaign not found"})
+            return
+        state = get_game_state(code)
+        character: Character = state.characters.get(UUID(character_id))
+        character_data = character.to_json()
+        inventory = character_data.get("inventory")
+        weapon = character_data.get("weapon")
+        armor = character_data.get("armor")
+        shield = character_data.get("shield")
+        emit("inventory_updated", {
+            "inventory":inventory,
+            "weapon": weapon,
+            "armor": armor,
+            "shield": shield
+        })
 
     @socketio.on("get_character_data")
     def handle_get_character_data(data):
@@ -536,3 +556,78 @@ def register_socket_handlers(
             emit("error", {"message": "Character not found"})
             return
         emit("character_data_received", character.to_json())
+
+    @socketio.on("get_items")
+    def handle_get_items():
+        serialized = [serialize_item_instance(inst) for inst in item_instances]
+        emit("items_result", serialized)
+
+
+
+    @socketio.on("save_and_exit")
+    def save_and_exit(data):
+        campaign_code = data.get("campaign_code")
+        if not campaign_code:
+            emit("error", {"message": "Campaña no encontrada"})
+            return
+
+        state = get_game_state(campaign_code)  # <-- aquí obtienes el game_state con todos los characters
+
+        from flask import current_app
+        services = current_app.extensions["services"]
+        character_service = services["character_service"]
+
+        # Guardar todos los personajes
+        for char in state.characters.values():  # char es instancia de Character
+            character_service.save(char)
+
+        # Limpiar estructuras de datos
+        game_states_dict.pop(campaign_code, None)
+        campaigns_dict.pop(campaign_code, None)
+
+        # También eliminar cualquier socket asociado
+        to_remove = [sid for sid, code in socket_campaigns_dict.items() if code == campaign_code]
+        for sid in to_remove:
+            socket_campaigns_dict.pop(sid, None)
+
+        emit("campaign_closed", {"campaign_code": campaign_code}, to=campaign_code)
+
+    from uuid import uuid4
+
+    @socketio.on("dm_give_item")
+    def dm_give_item(data):
+        campaign_code = data.get("campaign_code")
+        item_instance_id = data.get("item_instance_id")
+        target_player_id = data.get("target_player_id")
+
+        if not campaign_code:
+            emit("error", {"message": "Campaña no encontrada"})
+            return
+
+        state = get_game_state(campaign_code)
+        character: Character = state.characters.get(UUID(target_player_id))
+        if not character:
+            emit("error", {"message": "Jugador no encontrado"})
+            return
+
+        # Buscar el item base por su ID
+        item_id = data.get("item_instance_id")  # renombrar a item_id para mayor claridad
+
+#        Buscar el Item base por item_id
+        base_item = next((i.item for i in item_instances if i.item.item_id == item_id), None)
+        print("giving item")
+        if not base_item:
+            emit("error", {"message":"item no encontrado"})
+            return
+        # Crear nueva instancia de ItemInstance para el jugador
+        new_instance = ItemInstance(base_item)
+        # Opcional: asignar un ID único si ItemInstance no lo hace automáticamente
+        new_instance.instance_id = str(uuid4())
+
+        # Añadir al inventario
+        success = character.add_item(new_instance)
+        if not success:
+            emit("error", {"message": "No se puede añadir el item al inventario"})
+            return
+        print(character.inventory)
+        emit("dm_give_item_success", {"player_id": target_player_id})

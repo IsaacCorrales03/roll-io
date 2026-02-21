@@ -98,7 +98,6 @@ def load_character():
     character_id = request.args.get("from_id")
     if not character_id:
         return jsonify({"error": "ID requerido"}), 400
-
     character = get_character_service().load(character_id)
     if not character:
         return jsonify({"error": "Personaje no encontrado"}), 404
