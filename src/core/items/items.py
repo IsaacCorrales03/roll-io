@@ -22,7 +22,7 @@ ITEMS: dict[str, Item] = {
         name="Long Sword",
         weight=3.0,
         dice_count=1,
-        dice_size="d8",
+        dice_size="1d8",
         attribute="STR",
         description="A versatile melee weapon that can be used with one or two hands.",
     ),

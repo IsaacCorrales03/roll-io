@@ -40,6 +40,39 @@ class CharacterRepository:
                     character["hp"]["max"],
                     defalut_token
                 ))
+                print(character)
+                # Saving throws
+                for ability in character.get("saving_throw_proficiencies", []):
+                    cursor.execute("""
+                        INSERT INTO character_saving_throw_proficiencies
+                        (character_id, ability_key)
+                        VALUES (%s, %s)
+                    """, (str(character["id"]), ability))
+
+
+                # Weapon proficiencies
+                for weapon in character.get("weapon_proficiencies", []):
+                    cursor.execute("""
+                        INSERT INTO character_weapon_proficiencies
+                        (character_id, weapon_key)
+                        VALUES (%s, %s)
+                    """, (str(character["id"]), weapon))
+
+
+                # Armor proficiencies
+                for armor in character.get("armor_proficiencies", []):
+                    cursor.execute("""
+                        INSERT INTO character_armor_proficiencies
+                        (character_id, armor_key)
+                        VALUES (%s, %s)
+                    """, (str(character["id"]), armor))
+
+                for skill in character.get("skill_proficiencies", []):
+                    cursor.execute("""
+                        INSERT INTO character_skill_proficiencies
+                        (character_id, skill_key)
+                        VALUES (%s, %s)
+                    """, (str(character["id"]), skill))
             except Exception as e:
                 import traceback
                 traceback.print_exc()
@@ -181,3 +214,28 @@ class CharacterRepository:
             )
             return cursor.fetchall()
 
+    def get_proficiencies(self, character_id: str) -> dict:
+        with self.db.cursor(dictionary=True) as cursor:
+            cursor.execute(
+                "SELECT ability_key FROM character_saving_throw_proficiencies WHERE character_id = %s",
+                (character_id,)
+            )
+            saving_throws = [row["ability_key"] for row in cursor.fetchall()]
+
+            cursor.execute(
+                "SELECT weapon_key FROM character_weapon_proficiencies WHERE character_id = %s",
+                (character_id,)
+            )
+            weapons = [row["weapon_key"] for row in cursor.fetchall()]
+
+            cursor.execute(
+                "SELECT armor_key FROM character_armor_proficiencies WHERE character_id = %s",
+                (character_id,)
+            )
+            armors = [row["armor_key"] for row in cursor.fetchall()]
+
+        return {
+            "saving_throw_proficiencies": saving_throws,
+            "weapon_proficiencies": weapons,
+            "armor_proficiencies": armors,
+        }

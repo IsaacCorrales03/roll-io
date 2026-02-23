@@ -5,6 +5,7 @@ from uuid import uuid4, UUID
 from typing import Optional, Dict, Any
 from abc import ABC, abstractmethod
 
+from src.core.combat.phase import Phase
 from src.core.character.enemy import Enemy
 from src.core.base import Actor
 from src.core.game.query import Query, QueryHandler
@@ -41,7 +42,6 @@ class EventDispatcher:
         """Despacha un evento a handlers globales y a features del actor"""
         # 1️⃣ Registrar el evento
         state.event_log.append(event)
-
         # 2️⃣ Ejecutar handlers globales
         for handler in self._handlers.get(event.type, []):
             handler.handle(event, state)
@@ -77,7 +77,7 @@ class GameState:
     # Flujo global
     current_turn: int = 0
     current_actor: Optional[UUID] = None
-    current_phase: Optional[str] = None  # combat | exploration | rest | dialogue
+    current_phase: Optional[Phase] = None  # combat | exploration | rest | dialogue
     current_day: int = 0
     # Orden de iniciativa (solo relevante en combate)
     initiative_order: list[UUID] = field(default_factory=list)
@@ -170,14 +170,36 @@ class GameState:
     def add_character(self, character: Actor):
         if not character.id in self.characters:
             self.characters[character.id] = character
+    def add_enemy(self, enemy: Enemy):
+        if not enemy.id in self.enemies:
+            self.enemies[enemy.id] = enemy
+
     def move_token(self, token_id: UUID, x: int, y: int):
         token = self.tokens[token_id]
         if not token:
             raise RuntimeError("Token no existe")
         token["x"] = x
         token["y"] = y
+    def get_combatant(self, actor_id: UUID):
+        if actor_id in self.characters:
+            return self.characters[actor_id]
 
+        if actor_id in self.enemies:
+            return self.enemies[actor_id]
 
+        return None
+    def get_actor(self, actor_id: UUID):
+        if actor_id in self.characters:
+            return self.characters[actor_id]
+        if actor_id in self.enemies:
+            return self.enemies[actor_id]
+        return None
+    def iter_combatants(self):
+        for character in self.characters.values():
+            yield character
+
+        for enemy in self.enemies.values():
+            yield enemy
 
 def LongRestEvent(actor_id):
     return Event(

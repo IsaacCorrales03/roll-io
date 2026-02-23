@@ -34,14 +34,12 @@ class Character(Actor):
 
         # Rasgos especiales raciales
         self.special_traits = race.special_traits.copy()
-        # Competencias con armas según la clase
-        self.weapon_proficiencies = dnd_class.weapon_proficiencies.copy()
         # Puntos de vida iniciales
         self.max_hp = self.dnd_class.hit_die + self.con_mod
         self.hp = self.max_hp
 
-        # Bono de competencia inicial
-        self.proficiency_bonus = 2
+
+
         self.current_location = ""
         # Lista de habilidades de clase activas
         self.features: list[ClassFeature] = []
@@ -150,7 +148,7 @@ class Character(Actor):
             if instance.equipped:
                 self.equip(instance)
 
-
+    
 
 
 
@@ -170,7 +168,6 @@ class Character(Actor):
             "class": {
                 "name": self.dnd_class.name,
                 "hit_die": self.dnd_class.hit_die,
-                "weapon_proficiencies": self.weapon_proficiencies,
             },
             "attributes": self.attributes,
             "points": self.points,
@@ -201,6 +198,10 @@ class Character(Actor):
                 "ac_bonus": self.shield.ac_bonus if self.shield else None,
             },
             "proficiency_bonus": self.proficiency_bonus,
+            "saving_throw_proficiencies": list(self.saving_throw_proficiencies),
+            "weapon_proficiencies": list(self.weapon_proficiencies),
+            "armor_proficiencies": list(self.armor_proficiencies),
+            "skill_proficiencies": list(self.skill_proficiencies),
             "features": [
                 {
                     "name": f.name,
@@ -270,6 +271,10 @@ class Character(Actor):
         # ---- recalcular derivados ----
         char.proficiency_bonus = 2 + ((char.level - 1) // 4)
         char.texture = data.get("texture", None)
+        char.saving_throw_proficiencies = set(data.get("saving_throw_proficiencies", []))
+        char.weapon_proficiencies = set(data.get("weapon_proficiencies", []))
+        char.armor_proficiencies = set(data.get("armor_proficiencies", []))
+        char.skill_proficiencies = set(data.get("skill_proficiencies", []))
         # ---- features ----
         char.features.clear()
         for lvl in range(1, char.level + 1):

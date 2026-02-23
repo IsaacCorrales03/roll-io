@@ -17,7 +17,7 @@ class GetArmorClass(Query):
 
 class GetArmorClassHandler(QueryHandler[GetArmorClass, ArmorClassResult]):
     def handle(self, query: GetArmorClass, state: GameState) -> ArmorClassResult:
-        actor = state.characters.get(query.actor_id)
+        actor = state.get_actor(query.actor_id)
         if actor is None:
             raise RuntimeError("Actor no encontrado")
 
@@ -66,7 +66,7 @@ class GetStatModifier(Query):
 
 class GetStatModifierHandler(QueryHandler[GetStatModifier, StatModifierResult]):
     def handle(self, query: GetStatModifier, state: GameState) -> StatModifierResult:
-        actor = state.characters.get(query.actor_id)
+        actor = state.get_actor(query.actor_id)
         if actor is None:
             raise RuntimeError("Actor no encontrado")
 

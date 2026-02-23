@@ -36,7 +36,7 @@ def build_game_state(campaign_code: str, campaigns, character_repository) -> Gam
     state = GameState(
         characters=characters,
         current_turn=1,
-        current_phase="exploration",
+        current_phase=Phase.EXPLORATION,
         dispatcher=dispatcher
     )
 

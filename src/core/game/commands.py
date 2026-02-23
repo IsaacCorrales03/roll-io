@@ -14,8 +14,9 @@ class AttackCommand:
     actor_id: UUID
     target_id: UUID
     mode: str
-    adventage: bool
-    disadventage: bool
+    advantage: bool
+    disadvantage: bool
+    attack_name: str = "attack"
 
 @dataclass(frozen=True)
 class UseBardicInspirationCommand:
@@ -36,18 +37,32 @@ class UseSongOfRestCommand:
     actor_id: UUID
     targets: list[UUID]  # opcional: a quién afecta
 
+@dataclass(frozen=True)
 class StatusCommand:
-    def __init__(self, actor_id: UUID, target_id: UUID, status: str, duration_turns: int = 1):
-        self.actor_id = actor_id       # quien aplica el estado
-        self.target_id = target_id     # quien recibe el estado
-        self.status = status           # el nombre del estado
-        self.duration_turns = duration_turns
+    actor_id: UUID
+    target_id: UUID
+    status: str
+    duration_turns: int = 1
 
+@dataclass(frozen=True)
 class CreateEnemyCommand:
-    def __init__(self, name: str, hp: int, max_hp: int, ac: int, asset_url: str, size=(1, 1)):
-        self.name = name
-        self.max_hp = max_hp
-        self.hp = hp
-        self.ac = ac
-        self.asset_url = asset_url  
-        self.size = size
+    name:str
+    max_hp: int
+    hp: int
+    ac: int
+    asset_url: str
+    size: tuple
+
+@dataclass(frozen=True)
+class MoveCommand:
+    actor_id: UUID
+    from_position: tuple[int, int]
+    to_position: tuple[int, int]
+@dataclass(frozen=True)
+class StartCombatCommand:
+    participant_ids: list[UUID]
+
+
+@dataclass(frozen=True)
+class EndTurnCommand:
+    actor_id: UUID

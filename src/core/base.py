@@ -28,6 +28,13 @@ class Action(BaseEntity, ABC):
     def resolve(self, actor: "Actor", target: "Actor", context) -> dict:
         pass
 
+class Movement:
+    def __init__(self, base_speed: int):
+        self.base_speed = base_speed
+        self.remaining = base_speed
+
+    def reset(self):
+        self.remaining = self.base_speed
 
 class Actor(ABC):
     """
@@ -77,11 +84,17 @@ class Actor(ABC):
         self.attributes = attributes
         self.active_effects = []
         self.features = []
+        self.proficiency_bonus = 2
+        self.skill_proficiencies: set[str] = set()
+        self.saving_throw_proficiencies: set[str] = set()
+        self.weapon_proficiencies: set[str] = set()
+        self.armor_proficiencies: set[str] = set()
         self.armor = None
         self.shield: Optional[Shield] = None
         self.weapon: Optional[Weapon] = None
         self.armor: Optional[Armor] = None
         self.hp = 0
+        self.movement = Movement(base_speed=30)
         self.level = 0
         self.max_hp = 0
         self.base_ac: Optional[int] = None
@@ -89,7 +102,9 @@ class Actor(ABC):
         self.inspiration_dice = {}  # key: ClassFeature instance, value: dict con 'die' y 'turns_left'
         self.status: dict = {}
         self.current_location = ""
-    
+        self.active_conditions = []
+        self.temp_bonuses = []
+        self.position = (0,0)
     def calc_ac(self) -> int:
         """ Esta función se encarga de calcular y devolver el AC de un actor"""
         ac = 10 + self.dex_mod
@@ -141,3 +156,12 @@ class Actor(ABC):
             if feature.name == name:
                 return feature
         return None
+    
+    def reset_turn_resources(self) -> None:
+        self.action_available = True
+        self.bonus_action_available = True
+        self.reaction_available = True
+        self.movement.reset() 
+    def clear_combat_effects(self) -> None:
+        self.active_conditions.clear()
+        self.temp_bonuses.clear()

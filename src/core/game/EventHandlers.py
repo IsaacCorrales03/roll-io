@@ -1,6 +1,8 @@
+import random
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from src.core.combat.phase import Phase
 from src.core.character.enemy import Enemy
 from src.features.world.domain.token import Token
 from src.core.game.Event import Event, EventContext, EventHandler, GameState
@@ -8,27 +10,62 @@ from src.core.character.ProgresionSystem import ProgressionSystem
 
 
 
-class LevelUpHandler:
+class LevelUpHandler(EventHandler):
     def handle(self, event, state):
         if event.type != "level_up":
             return
-        actor = state.characters[event.context.actor_id]
+        actor = state.characters[event.context.actor_id] # type: ignore
         ProgressionSystem.apply(actor, state)
 
 class ApplyDamageHandler(EventHandler):
+
     def handle(self, event: Event, state: GameState) -> None:
+
         if event.type != "attack_hit":
             return
 
         target_id = event.payload["target_id"]
         damage = event.payload["damage"]
-        target = state.characters.get(target_id)
-        if target:
-            target.hp -= damage
-            if target.hp <= 0:
+
+        target = state.get_actor(target_id)
+        if target is None:
+            return
+
+        target.hp -= damage
+
+        if target.hp > 0:
+            return
+
+        # Clamp
+        target.hp = 0
+
+        # Remover de iniciativa
+        if target.id in state.initiative_order:
+            state.initiative_order.remove(target.id)
+
+        # Emitir evento de muerte
+        state.dispatch(Event(
+            type="entity_killed",
+            context=EventContext(actor_id=target.id),
+            payload={},
+            cancelable=False
+        ))
+        
+        # Verificar fin de combate
+        if state.current_phase == Phase.COMBAT:
+            alive = [
+                state.get_actor(a_id)
+                for a_id in state.initiative_order
+            ]
+
+            # Separar equipos
+            players_alive = any(a_id in state.characters for a_id in state.initiative_order)
+            enemies_alive = any(a_id in state.enemies for a_id in state.initiative_order)
+
+            if not players_alive or not enemies_alive:
                 state.dispatch(Event(
-                    type="entity_killed",
-                    context=EventContext(actor_id=target.id),
+                    type="combat_ended",
+                    context=EventContext(),
                     payload={},
                     cancelable=False
                 ))
@@ -235,3 +272,131 @@ class CreateEnemyHandler(EventHandler):
             },
             cancelable=False
         ))
+
+class InitiativeRollHandler(EventHandler):
+
+    def handle(self, event: Event, state: GameState):
+
+        if event.type != "initiative_roll_requested":
+            return
+
+        if not event.context or not event.context.actor_id:
+            raise RuntimeError("initiative_roll_requested sin actor_id")
+
+        actor_id = event.context.actor_id
+
+        value = random.randint(1, 20)
+
+        state.dispatch(Event(
+            type="roll_result",
+            context=EventContext(actor_id=actor_id),
+            payload={
+                "value": value,
+                "reason": "initiative"
+            },
+            cancelable=False
+        ))
+
+class CombatStartedHandler(EventHandler):
+
+    def handle(self, event, state):
+
+        if event.type != "combat_started":
+            return
+
+        state.current_phase = Phase.COMBAT
+        state.initiative_order = event.payload["initiative_order"]
+        state.current_turn = 1
+        state.current_actor = state.initiative_order[0]
+
+        # Inicializar recursos
+        for actor_id in state.initiative_order:
+            actor = state.get_actor(actor_id)
+
+            state.resources[actor_id] = {
+                "action": 1,
+                "bonus_action": 1,
+                "movement": getattr(actor, "speed", 30),
+                "reaction": 1
+            }
+            
+class TurnStartHandler(EventHandler):
+
+    def handle(self, event: Event, state: GameState):
+
+        if event.type != "turn_started":
+            return
+
+        if not event.context or not event.context.actor_id:
+            raise RuntimeError("turn_started sin actor_id")
+
+        actor_id = event.context.actor_id
+
+        combatant = state.get_combatant(actor_id)
+        if not combatant:
+            return
+
+        combatant.reset_turn_resources()
+        
+class TurnEndedHandler(EventHandler):
+
+    def handle(self, event, state):
+
+        if event.type != "turn_ended":
+            return
+
+        current_index = state.initiative_order.index(state.current_actor) # type: ignore
+
+        next_index = current_index + 1
+
+        if next_index >= len(state.initiative_order):
+            next_index = 0
+            state.current_turn += 1
+
+        state.current_actor = state.initiative_order[next_index]
+
+        # Reset recursos del nuevo actor
+        actor = state.get_actor(state.current_actor)
+
+        state.resources[state.current_actor] = {
+            "action": 1,
+            "bonus_action": 1,
+            "movement": getattr(actor, "speed", 30),
+            "reaction": 1
+        }
+
+class CombatEndHandler(EventHandler):
+
+    def handle(self, event, state):
+
+        if event.type != "combat_ended":
+            return
+
+        for combatant in state.iter_combatants():
+            combatant.clear_combat_effects()
+        state.current_phase = Phase.EXPLORATION
+        state.initiative_order.clear()
+        state.current_actor = None
+
+class CombatLogger(EventHandler):
+    def handle(self, event: Event, state: GameState) -> None:
+        if event.type == "attack_roll":
+            print(f"{state.get_actor(event.context.actor_id).name} attack_roll: {event.payload["attack_score"]}") # type: ignore
+
+        elif event.type == "attack_hit":
+            print(f"Hit! Damage: {event.payload['damage']}")
+
+        elif event.type == "attack_miss":
+            print("Miss!")
+
+        elif event.type == "attack_failed":
+            fallador = state.get_actor(event.context.actor_id) # type: ignore
+            print(f"{fallador.name} falló el ataque por: {event.payload["reason"]}") #type: ignore
+        elif event.type == "entity_killed":
+            print(f"{state.get_actor(event.context.actor_id).name} died") # type: ignore
+
+        elif event.type == "turn_ended":
+            print("Turn ended")
+        elif event.type == "combat_ended":
+            print("Combate finalizado")
+        

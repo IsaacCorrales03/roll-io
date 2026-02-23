@@ -44,6 +44,8 @@ class Weapon(Item):
                  dice_size: str,
                  attribute: str,
                  bonus: int = 0,
+                 range: int = 5, 
+                 long_range: int | None = None,
                  damage_type: str = "slashing"):
         super().__init__(
             item_id=item_id,
@@ -68,6 +70,9 @@ class Weapon(Item):
 
         # Tipo de daño (slashing, piercing, bludgeoning, etc.)
         self.damage_type = damage_type
+        # Alcance en pies
+        self.range = range
+        self.long_range = long_range
 
 class Armor(Item):
     def __init__(

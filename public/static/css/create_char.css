@@ -161,3 +161,91 @@
     margin-bottom: 1rem;
     font-family: 'Cinzel', serif;
 }
+/* =======================
+   Skill Proficiencies
+   ======================= */
+
+.skill-section {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    border-radius: 1rem;
+    padding: 1.25rem;
+}
+
+.skill-section h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #c084fc;
+    margin-bottom: 0.25rem;
+}
+
+.skill-section p {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-bottom: 1rem;
+}
+
+#skill-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.skill-option {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    border-radius: 0.6rem;
+    color: #cbd5e1;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.skill-option:hover {
+    border-color: rgba(168, 85, 247, 0.5);
+    background: rgba(168, 85, 247, 0.08);
+    color: #fff;
+}
+
+.skill-option input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(148, 163, 184, 0.4);
+    border-radius: 0.25rem;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.skill-option input[type="checkbox"]:checked {
+    background: #a855f7;
+    border-color: #a855f7;
+}
+
+.skill-option input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: -1px;
+    width: 5px;
+    height: 9px;
+    border: 2px solid white;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+}
+
+.skill-option:has(input:checked) {
+    border-color: rgba(168, 85, 247, 0.6);
+    background: rgba(168, 85, 247, 0.12);
+    color: #e9d5ff;
+}

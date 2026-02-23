@@ -1,4 +1,3 @@
-
 // =======================
 // Global State
 // =======================
@@ -7,20 +6,18 @@ let selectedClass = 'Barbaro';
 let racesCache = null;
 let classesCache = null;
 let radarChart = null;
+let selectedSkills = [];   // ← declarado aquí, no al final
 
 // =======================
 // Tab Switching
 // =======================
 function switchTab(tabName) {
-    // Remove active from all tabs
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-    // Add active to selected tab
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
     document.getElementById(`tab-${tabName}`).classList.add('active');
 
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -40,20 +37,32 @@ async function preloadData() {
         // Populate race grid
         const raceGrid = document.getElementById('race-grid');
         raceGrid.innerHTML = Object.keys(racesCache).map((raceKey, index) => `
-                <button type="button" class="selection-option ${index === 0 ? 'active' : ''}" data-race="${raceKey}">
-                    ${racesCache[raceKey].name}
-                </button>
-            `).join('');
+            <button type="button" class="selection-option ${index === 0 ? 'active' : ''}" data-race="${raceKey}">
+                ${racesCache[raceKey].name}
+            </button>
+        `).join('');
+
+        // Set initial selectedRace to the first key
+        const raceKeys = Object.keys(racesCache);
+        if (raceKeys.length > 0) {
+            selectedRace = raceKeys[0];
+        }
 
         // Populate class grid
         const classGrid = document.getElementById('class-grid');
         classGrid.innerHTML = Object.keys(classesCache).map((classKey, index) => `
-                <button type="button" class="selection-option ${index === 0 ? 'active' : ''}" data-class="${classKey}">
-                    ${classesCache[classKey].name}
-                </button>
-            `).join('');
+            <button type="button" class="selection-option ${index === 0 ? 'active' : ''}" data-class="${classKey}">
+                ${classesCache[classKey].name}
+            </button>
+        `).join('');
 
-        // Add event listeners to race buttons
+        // Set initial selectedClass to the first key
+        const classKeys = Object.keys(classesCache);
+        if (classKeys.length > 0) {
+            selectedClass = classKeys[0];
+        }
+
+        // Event listeners — races
         document.querySelectorAll('#race-grid .selection-option').forEach(option => {
             option.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -64,7 +73,7 @@ async function preloadData() {
             });
         });
 
-        // Add event listeners to class buttons
+        // Event listeners — classes
         document.querySelectorAll('#class-grid .selection-option').forEach(option => {
             option.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -90,37 +99,35 @@ function updateRaceInfo() {
     // Column 2: Name, Description, Chart
     const raceInfoMain = document.getElementById('race-info-main');
     raceInfoMain.innerHTML = `
-            <h3 class="race-name">${raceData.name}</h3>
-            <p class="description">${raceData.description}</p>
-
-            <div class="stats-container">
-                <canvas id="radarChart" width="280" height="280"></canvas>
-            </div>
-        `;
+        <h3 class="race-name">${raceData.name}</h3>
+        <p class="description">${raceData.description}</p>
+        <div class="stats-container">
+            <canvas id="radarChart" width="280" height="280"></canvas>
+        </div>
+    `;
 
     // Column 3: Bonuses & Traits
     const raceInfoDetails = document.getElementById('race-info-details');
     raceInfoDetails.innerHTML = `
-            <div>
-                <h4 class="text-lg font-bold text-amber-400 mb-3">Bonificaciones Raciales</h4>
-                ${Object.entries(raceData.racial_bonus_stats).map(([k, v]) => `
-                    <div class="trait-item">
-                        <div class="trait-title">${k}</div>
-                        <div class="trait-description">+${v}</div>
-                    </div>
-                `).join("")}
-            </div>
-
-            <div class="traits-list mt-6">
-                <h4 class="text-lg font-bold text-amber-400 mb-3">Rasgos Raciales</h4>
-                ${Object.entries(raceData.special_traits).map(([k, v]) => `
-                    <div class="trait-item">
-                        <div class="trait-title">${k}</div>
-                        <div class="trait-description">${v}</div>
-                    </div>
-                `).join("")}
-            </div>
-        `;
+        <div>
+            <h4 class="text-lg font-bold text-amber-400 mb-3">Bonificaciones Raciales</h4>
+            ${Object.entries(raceData.racial_bonus_stats).map(([k, v]) => `
+                <div class="trait-item">
+                    <div class="trait-title">${k}</div>
+                    <div class="trait-description">+${v}</div>
+                </div>
+            `).join("")}
+        </div>
+        <div class="traits-list mt-6">
+            <h4 class="text-lg font-bold text-amber-400 mb-3">Rasgos Raciales</h4>
+            ${Object.entries(raceData.special_traits).map(([k, v]) => `
+                <div class="trait-item">
+                    <div class="trait-title">${k}</div>
+                    <div class="trait-description">${v}</div>
+                </div>
+            `).join("")}
+        </div>
+    `;
 
     createRadarChart(raceData.base_attributes);
 }
@@ -130,9 +137,11 @@ function updateRaceInfo() {
 // =======================
 function createRadarChart(stats) {
     const ctx = document.getElementById('radarChart');
+    if (!ctx) return;
 
     if (radarChart) {
         radarChart.destroy();
+        radarChart = null;
     }
 
     radarChart = new Chart(ctx, {
@@ -202,35 +211,71 @@ function updateClassInfo() {
     const classInfoDiv = document.getElementById('class-info');
 
     classInfoDiv.innerHTML = `
-            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-3 sticky top-0 bg-slate-900/95 backdrop-blur-sm pb-4 -mt-2 pt-4 z-10 rounded-lg">
-                <div class="w-8 h-8 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg flex items-center justify-center border border-purple-500/20">
-                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                </div>
-                Información de Clase
-            </h3>
-            <div class="mt-4">
-                <h3 class="class-name">${classData.name}</h3>
-                <p class="description">${classData.description}</p>
+        <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-3 sticky top-0 bg-slate-900/95 backdrop-blur-sm pb-4 -mt-2 pt-4 z-10 rounded-lg">
+            <div class="w-8 h-8 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg flex items-center justify-center border border-purple-500/20">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+            </div>
+            Información de Clase
+        </h3>
+        <div class="mt-4">
+            <h3 class="class-name">${classData.name}</h3>
+            <p class="description">${classData.description}</p>
+            <div class="hit-die">Dado de Golpe: ${classData.hit_die}</div>
+            <div class="class-features">
+                ${Object.entries(classData.special_features).map(([level, features]) => `
+                    <div class="feature-level">
+                        <div class="level-header">Nivel ${level}</div>
+                        ${features.map(f => `
+                            <div class="trait-item">
+                                <div class="trait-title">${f.name}</div>
+                                <div class="trait-description">${f.description}</div>
+                            </div>
+                        `).join("")}
+                    </div>
+                `).join("")}
+            </div>
+        </div>
+    `;
 
-                <div class="hit-die">Dado de Golpe: ${classData.hit_die}</div>
+    // Reset skills
+    selectedSkills = [];
+    const skillContainer = document.getElementById("skill-selection-container");
 
-                <div class="class-features">
-                    ${Object.entries(classData.special_features).map(([level, features]) => `
-                        <div class="feature-level">
-                            <div class="level-header">Nivel ${level}</div>
-                            ${features.map(f => `
-                                <div class="trait-item">
-                                    <div class="trait-title">${f.name}</div>
-                                    <div class="trait-description">${f.description}</div>
-                                </div>
-                            `).join("")}
-                        </div>
+    if (classData.skill_choices_count > 0 && classData.skill_choices.length > 0) {
+        skillContainer.innerHTML = `
+            <div class="skill-section">
+                <h4>Competencias de Habilidad</h4>
+                <p>Selecciona ${classData.skill_choices_count} habilidad${classData.skill_choices_count > 1 ? 'es' : ''}</p>
+                <div id="skill-options">
+                    ${classData.skill_choices.map(skill => `
+                        <label class="skill-option">
+                            <input type="checkbox" value="${skill}">
+                            ${skill}
+                        </label>
                     `).join("")}
                 </div>
             </div>
         `;
+
+        skillContainer.querySelectorAll("input[type=checkbox]").forEach(box => {
+            box.addEventListener("change", function () {
+                if (this.checked) {
+                    if (selectedSkills.length >= classData.skill_choices_count) {
+                        this.checked = false;
+                        return;
+                    }
+                    selectedSkills.push(this.value);
+                } else {
+                    selectedSkills = selectedSkills.filter(s => s !== this.value);
+                }
+            });
+        });
+
+    } else {
+        skillContainer.innerHTML = "";
+    }
 }
 
 // =======================
@@ -241,9 +286,24 @@ document.getElementById("create-character-btn").addEventListener("click", async 
 
     const name = document.getElementById("char-name").value.trim();
 
-    if (!name || !selectedRace || !selectedClass) {
-        alert("Por favor completa todos los campos");
+    if (!name) {
+        alert("Por favor ingresa un nombre para tu héroe");
         return;
+    }
+
+    if (!selectedRace || !selectedClass) {
+        alert("Por favor selecciona una raza y una clase");
+        return;
+    }
+
+    // Validate skill count if required
+    const classData = classesCache[selectedClass];
+    if (classData && classData.skill_choices_count > 0) {
+        if (selectedSkills.length !== classData.skill_choices_count) {
+            alert(`Debes seleccionar exactamente ${classData.skill_choices_count} habilidad${classData.skill_choices_count > 1 ? 'es' : ''}`);
+            switchTab('clase');
+            return;
+        }
     }
 
     try {
@@ -255,12 +315,14 @@ document.getElementById("create-character-btn").addEventListener("click", async 
             body: JSON.stringify({
                 name,
                 race: selectedRace,
-                class: selectedClass
+                class: selectedClass,
+                skills: selectedSkills   // ← incluido en el body
             })
         });
 
         if (!response.ok) {
-            throw new Error("Error al crear personaje");
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || "Error al crear personaje");
         }
 
         const data = await response.json();
@@ -273,9 +335,10 @@ document.getElementById("create-character-btn").addEventListener("click", async 
         } else {
             window.location.href = `/dashboard`;
         }
+
     } catch (error) {
         console.error("Error:", error);
-        alert("Error al crear el personaje. Por favor intenta de nuevo.");
+        alert(error.message || "Error al crear el personaje. Por favor intenta de nuevo.");
     }
 });
 

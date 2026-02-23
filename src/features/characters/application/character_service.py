@@ -14,18 +14,25 @@ class CharacterService:
     def __init__(self, repo: CharacterRepository):
         self.repo = repo
 
-    def create(self, owner_id: uuid.UUID, name: str, race_key: str, class_key: str, token_texture = None) -> Character:
+    def create(self, owner_id: uuid.UUID, name: str, race_key: str, class_key: str, chosen_skills: list[str], token_texture = None, ) -> Character:
+        dnd_class = CLASS_MAP[class_key]()
         character = Character(
             id=uuid.uuid4(),
             owner_id=owner_id,
             name=name,
             race=RACE_MAP[race_key],
-            dnd_class=CLASS_MAP[class_key]()
+            dnd_class=dnd_class
         )
         if token_texture:
             character.texture = token_texture
         else:
             character.texture = f"imgs/{class_key}.jpg" # type: ignore
+        dnd_class.grant_proficiencies(
+            character,
+            chosen_skills=chosen_skills
+        )
+        dnd_class.grant_features(character)
+        
         self.repo.create(character.to_json(), owner_id, token_texture)
         self.repo.save_inventory(str(character.id), {})
         return character
@@ -59,12 +66,12 @@ class CharacterService:
         if data is None:
             return None
 
+        proficiencies = self.repo.get_proficiencies(from_id)
+        data.update(proficiencies)
+
         character = json_to_character(data)
 
-        # ahora devuelve lista de dicts
         inventory_rows = self.repo.get_inventory(from_id)
-
-        # delegas directamente
         character.load_inventory(inventory_rows)
 
         return character

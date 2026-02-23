@@ -45,41 +45,46 @@ def create_character():
         return jsonify({"error": "No autenticado"}), 401
 
     data = request.json or {}
+
     name = data.get("name")
     race_key = data.get("race")
     class_key = data.get("class")
+    chosen_skills = data.get("skills", [])
 
     if not name or not race_key or not class_key:
         return jsonify({"error": "Datos incompletos"}), 400
+
+    if not isinstance(chosen_skills, list):
+        return jsonify({"error": "Formato de habilidades inválido"}), 400
+
     try:
         character = get_character_service().create(
             UUID(owner_id),
             name,
             race_key,
-            class_key
+            class_key,
+            chosen_skills  # ← NUEVO
         )
 
         # -------- CREATE TOKEN --------
-        try:
-            get_token_service().create(
-                character_id=character.id,
-                x=0,
-                y=0,
-                size=(1, 1),
-                owner_user_id=UUID(owner_id),
-                is_visible=True,
-                label=character.name,
-            )
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
+        get_token_service().create(
+            character_id=character.id,
+            x=0,
+            y=0,
+            size=(1, 1),
+            owner_user_id=UUID(owner_id),
+            is_visible=True,
+            label=character.name,
+        )
+
     except KeyError:
-        import traceback
-        traceback.print_exc()
         return jsonify({"error": "Raza o clase inválida"}), 400
+
+    except ValueError as e:
+        # Errores de validación de skills
+        return jsonify({"error": str(e)}), 400
+
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
     return jsonify({
