@@ -342,22 +342,42 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
         return response
 
     
-    @app.route('/storage/<path:filename>')
-    def serve_storage(filename):
-        from flask import send_from_directory, abort
+    @app.route('/storage', defaults={'subpath': ''})
+    @app.route('/storage/<path:subpath>')
+    def storage(subpath):
+        from flask import jsonify, abort, send_from_directory
         import os
-        
-        # BASE_DIR apunta a la raíz del proyecto
-        storage_dir = os.path.join(BASE_DIR, 'storage', 'uploads')
-        
-        # filename ya viene como: "uploads/maps/file.jpg" o "maps/file.jpg"
-        # Necesitamos solo: "maps/file.jpg"
-        clean_filename = filename
-        if clean_filename.startswith('uploads/'):
-            clean_filename = clean_filename[8:]  # Remover "uploads/"
-        
-        full_path = os.path.join(storage_dir, clean_filename)
-    
 
-        return send_from_directory(storage_dir, clean_filename)
+        storage_root = os.path.join(BASE_DIR, 'storage', 'uploads')
+        requested_path = os.path.normpath(os.path.join(storage_root, subpath))
+
+        # Seguridad: evitar salir del directorio base
+        if not requested_path.startswith(storage_root):
+            abort(403)
+
+        if not os.path.exists(requested_path):
+            abort(404)
+
+        # Si es archivo → devolver archivo real
+        if os.path.isfile(requested_path):
+            directory = os.path.dirname(requested_path)
+            filename = os.path.basename(requested_path)
+            return send_from_directory(directory, filename)
+
+        # Si es carpeta → listar contenido
+        items = []
+        for item in os.listdir(requested_path):
+            full_item_path = os.path.join(requested_path, item)
+            items.append({
+                "name": item,
+                "type": "directory" if os.path.isdir(full_item_path) else "file",
+                "path": os.path.join(subpath, item).replace("\\", "/")
+            })
+
+        return jsonify({
+            "type": "directory",
+            "path": subpath,
+            "items": sorted(items, key=lambda x: (x["type"], x["name"]))
+        })
+        
     return app
