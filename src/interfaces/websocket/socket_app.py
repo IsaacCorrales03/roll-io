@@ -653,6 +653,7 @@ def register_socket_handlers(
         StartCombatAction(start_cmd).execute(state)
         emit("combat_started")
 
+    @socketio.on("enemy_attack")
     @socketio.on("player_attack")
     def handle_attack(data):
         state = get_game_state(data["campaig_code"])
@@ -664,7 +665,7 @@ def register_socket_handlers(
             disadvantage=data["disadvantage"]
         )
         result = AttackAction(attack_command).execute(state)
-
+        
         socketio.emit("attack_result", result.payload)
 
         next_turn(state, data["character_id"])
@@ -674,4 +675,7 @@ def register_socket_handlers(
         EndTurnAction(end_turn_cmd).execute(game_state)
         if game_state.current_phase != Phase.COMBAT:
             socketio.emit("combat_finished")
+            return
+        current_actor = game_state.current_actor
+        socketio.emit("next_combatient", {"current_actor" : current_actor})
         return
