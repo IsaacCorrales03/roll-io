@@ -792,6 +792,21 @@ async function createEnemy() {
     const name = document.getElementById('enemy-name').value.trim();
     const hp = parseInt(document.getElementById('enemy-hp').value);
     const maxHp = parseInt(document.getElementById('enemy-max-hp').value);
+    const attributes = {
+        STR: parseInt(document.getElementById("enemy-str").value),
+        DEX: parseInt(document.getElementById("enemy-dex").value),
+        CON: parseInt(document.getElementById("enemy-con").value),
+        INT: parseInt(document.getElementById("enemy-int").value),
+        WIS: parseInt(document.getElementById("enemy-wis").value),
+        CHA: parseInt(document.getElementById("enemy-cha").value),
+    };
+
+    const attacks = [{
+        name: document.getElementById("attack-name").value,
+        attack_bonus: parseInt(document.getElementById("attack-bonus").value),
+        damage: document.getElementById("attack-damage").value,
+        type: document.getElementById("attack-type").value
+    }];
     const fileInput = document.getElementById('enemy-asset');
     const size = document.getElementById('enemy-size').value;
     const ac = parseInt(document.getElementById('enemy-ac').value) || 10;
@@ -827,6 +842,8 @@ async function createEnemy() {
             max_hp: maxHp,
             asset: uploadData.asset_url,
             size: size_map,
+            attributes: attributes,
+            attacks: attacks
         });
 
         // Limpieza opcional de formulario

@@ -71,7 +71,7 @@ def create_full_campaign():
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     map_file.save(filepath) # type: ignore
 
-    map_url = f"/uploads/maps/{filename}"
+    map_url = f"/uploads/{filename}"
 
     # ---------- Crear mundo ----------
     world = get_world_service().create_world(
