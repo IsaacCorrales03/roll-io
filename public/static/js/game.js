@@ -8,6 +8,9 @@ let current_section_offset_y;
 let isDM;
 let myCharacterId;
 let dm_player_list = [];
+let dm_enemies_list = [];
+let selectedCombatants = new Set();
+let selectedToken = null;
 /* ================================
    SOCKET.IO - CONEXIÓN
 ================================ */
@@ -26,23 +29,23 @@ window.onload = () => {
         console.log('👋 Jugador se unió:', d);
         // TODO: Actualizar lista de jugadores/tokens
     });
-socket.on('items_result', data => {
-    const items = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : [];
-    const container = document.getElementById('dm-item-list');
-    container.innerHTML = '';
+    socket.on('items_result', data => {
+        const items = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : [];
+        const container = document.getElementById('dm-item-list');
+        container.innerHTML = '';
 
-    if (items.length === 0) {
-        container.innerHTML = '<div style="color:#888;">Sin items disponibles</div>';
-        return;
-    }
+        if (items.length === 0) {
+            container.innerHTML = '<div style="color:#888;">Sin items disponibles</div>';
+            return;
+        }
 
-    items.forEach(item => {
-        const type = item.meta.item_type?.toLowerCase() || '';
-        const li = document.createElement('div');
-        li.className = 'item-card feature-item';
-        li.dataset.itemId = item.item_id || item.instance_id;
+        items.forEach(item => {
+            const type = item.meta.item_type?.toLowerCase() || '';
+            const li = document.createElement('div');
+            li.className = 'item-card feature-item';
+            li.dataset.itemId = item.item_id || item.instance_id;
 
-        li.innerHTML = `
+            li.innerHTML = `
             <div class="item-header">
                 <div class="feature-name">${item.meta.name}</div>
                 <div class="item-type-badge type-${type}">${item.meta.item_type}</div>
@@ -57,9 +60,9 @@ socket.on('items_result', data => {
             </div>
         `;
 
-        container.appendChild(li);
+            container.appendChild(li);
+        });
     });
-});
 
 
     socket.on('game_resources_loaded', d => {
@@ -86,7 +89,7 @@ socket.on('items_result', data => {
 
         mapImage = new Image();
         mapImage.onload = () => { initializeGame(); };
-        mapImage.src = `/storage${d.current_scene.map_url}`;
+        mapImage.src = `/storage${d.current_scene.map_url}`.replace("uploads/", "");
     });
 
 
@@ -141,6 +144,9 @@ socket.on('items_result', data => {
 
     socket.on('entities_result', data => {
         console.log("Entities data:", data);
+        dm_player_list = data.players || [];
+        dm_enemies_list = data.enemies || [];
+
         renderDMEntities(data);
     });
 
@@ -149,23 +155,19 @@ socket.on('items_result', data => {
 
     });
     socket.on("enemy_created", (data) => {
-
         if (document.querySelector(`[data-token-id="${data.id}"]`)) return;
-
         const token = createTokenElement(data);
         document.getElementById("tokens-container").appendChild(token);
-
         updateGridState(data.id, null, null, data.x, data.y);
     });
 
 
     socket.on("tokens_sync", (tokens) => {
-
         document.querySelectorAll(".token").forEach(t => t.remove());
         initializeGrid();
 
         tokens.forEach(data => {
-            const token = createTokenElement(data);
+            const token = createTokenElement(data);   // mismo formato
             document.getElementById("tokens-container").appendChild(token);
             updateGridState(data.id, null, null, data.x, data.y);
         });
@@ -364,42 +366,29 @@ function renderCharacterGearAndInventory(character) {
 }
 function createTokenElement(data) {
     const token = document.createElement("div");
-    console.log("Creating token element with data:", data);
-    token.className = `token ${data.type || ""}`;
 
+    token.className = "token enemy";
     token.dataset.tokenId = data.id;
-    token.dataset.name = data.name || "";
-    token.dataset.hp = data.hp || 0;
-    token.dataset.maxHp = data.max_hp || 0;
-    token.dataset.ac = data.ac || 10;
+    token.dataset.name = data.label ?? "";
+    token.dataset.hp = data.hp ?? 0;
+    token.dataset.maxHp = data.max_hp ?? 0;
+    token.dataset.ac = data.ac ?? 10;
     token.dataset.gridX = data.x;
     token.dataset.gridY = data.y;
-    token.dataset.asset = data.asset || "";
-    token.dataset.label = data.label || "";
 
     token.style.left = `${data.x * TILE_SIZE + TILE_SIZE / 2}px`;
     token.style.top = `${data.y * TILE_SIZE + TILE_SIZE / 2}px`;
-    token.style.width = `${data.size[0] * TILE_SIZE}px`;
-    token.style.height = `${data.size[1] * TILE_SIZE}px`;
+    token.style.width = `${(data.width ?? 1) * TILE_SIZE}px`;
+    token.style.height = `${(data.height ?? 1) * TILE_SIZE}px`;
 
-    if (data.texture || data.asset) {
-        token.innerHTML = `
-            <img src="${data.texture || data.asset}" alt="${data.name}"
-                 draggable="false"
-                 style="width:100%; height:100%; object-fit:contain;">
-        `;
-    }
-
-    if (data.label) {
-        const label = document.createElement("div");
-        label.className = "token-label";
-        label.style.textAlign = "center";
-        label.textContent = data.label;
-        token.appendChild(label);
+    if (data.asset) {
+        token.innerHTML = `<img src="${data.asset}" alt="${data.label}"
+            draggable="false" style="width:100%;height:100%;object-fit:contain;">`;
     }
 
     return token;
 }
+
 
 /* ================================
    MAPA CON PAN/ZOOM
@@ -788,10 +777,111 @@ function updateGridState(tokenId, oldX, oldY, newX, newY) {
     }
 
 }
+function parseDamageExpression(expr) {
+    const match = expr.match(/^(\d+)d(\d+)([+-]\d+)?$/i);
+    if (!match) return null;
+
+    return {
+        dice_count: parseInt(match[1]),
+        dice_size: parseInt(match[2]),
+        damage_bonus: match[3] ? parseInt(match[3]) : 0
+    };
+}
+
+function addAttack() {
+    const container = document.getElementById("attacks-container");
+
+    const attackDiv = document.createElement("div");
+    attackDiv.classList.add("attack-item");
+
+    attackDiv.innerHTML = `
+        <hr>
+
+        <input type="text" class="attack-name" placeholder="Nombre del ataque" required>
+
+        <input type="number" class="attack-bonus" placeholder="Bonus al ataque" value="0">
+
+        <input type="text" class="attack-damage" placeholder="Daño (ej: 1d6+2)" required>
+
+        <label>Tipo de ataque:</label>
+        <select class="attack-category">
+            <option value="melee">Melee</option>
+            <option value="ranged">Ranged</option>
+        </select>
+
+        <label>Tipo de daño:</label>
+        <select class="attack-damage-type">
+            <option value="slashing">Slashing</option>
+            <option value="piercing">Piercing</option>
+            <option value="bludgeoning">Bludgeoning</option>
+            <option value="fire">Fire</option>
+            <option value="cold">Cold</option>
+            <option value="poison">Poison</option>
+            <option value="necrotic">Necrotic</option>
+            <option value="radiant">Radiant</option>
+        </select>
+
+        <button type="button" onclick="removeAttack(this)">
+            Eliminar
+        </button>
+    `;
+
+    container.appendChild(attackDiv);
+}
+
+function removeAttack(button) {
+    button.parentElement.remove();
+}
+
+function collectAttacks() {
+    const attackElements = document.querySelectorAll(".attack-item");
+    const attacks = [];
+
+    attackElements.forEach(el => {
+
+        const nameInput = el.querySelector(".attack-name");
+        const bonusInput = el.querySelector(".attack-bonus");
+        const damageInput = el.querySelector(".attack-damage");
+        const damageTypeSelect = el.querySelector(".attack-damage-type");
+
+        if (!nameInput || !bonusInput || !damageInput || !damageTypeSelect) {
+            console.error("Estructura de ataque incompleta");
+            return;
+        }
+
+        const name = nameInput.value.trim();
+        const bonus = parseInt(bonusInput.value) || 0;
+        const damageExpr = damageInput.value.trim();
+        const damageType = damageTypeSelect.value;
+
+        if (!name) return;
+
+        const parsed = parseDamageExpression(damageExpr);
+        if (!parsed) {
+            console.error("Formato inválido:", damageExpr);
+            return;
+        }
+
+        attacks.push({
+            name: name,
+            attack_bonus: bonus,
+            dice_count: parsed.dice_count,
+            dice_size: parsed.dice_size,
+            damage_bonus: parsed.damage_bonus,
+            damage_type: damageType
+        });
+    });
+
+    return attacks;
+}
 async function createEnemy() {
     const name = document.getElementById('enemy-name').value.trim();
     const hp = parseInt(document.getElementById('enemy-hp').value);
     const maxHp = parseInt(document.getElementById('enemy-max-hp').value);
+    const ac = parseInt(document.getElementById('enemy-ac').value) || 10;
+    const sizeValue = document.getElementById('enemy-size').value;
+    const fileInput = document.getElementById('enemy-asset');
+
     const attributes = {
         STR: parseInt(document.getElementById("enemy-str").value),
         DEX: parseInt(document.getElementById("enemy-dex").value),
@@ -801,19 +891,24 @@ async function createEnemy() {
         CHA: parseInt(document.getElementById("enemy-cha").value),
     };
 
-    const attacks = [{
-        name: document.getElementById("attack-name").value,
-        attack_bonus: parseInt(document.getElementById("attack-bonus").value),
-        damage: document.getElementById("attack-damage").value,
-        type: document.getElementById("attack-type").value
-    }];
-    const fileInput = document.getElementById('enemy-asset');
-    const size = document.getElementById('enemy-size').value;
-    const ac = parseInt(document.getElementById('enemy-ac').value) || 10;
-    if (!name || !hp || !maxHp || !fileInput.files.length) {
-        console.warn("Datos incompletos");
-        return;
+    const attacks = collectAttacks();
+
+    // Validaciones estrictas
+    if (!name) return console.warn("Nombre requerido");
+    if (Number.isNaN(hp) || Number.isNaN(maxHp)) return console.warn("HP inválido");
+    if (!fileInput.files.length) return console.warn("Asset requerido");
+
+    for (const key in attributes) {
+        if (Number.isNaN(attributes[key])) {
+            return console.warn(`Atributo inválido: ${key}`);
+        }
     }
+
+    if (attacks.length === 0) {
+        return console.warn("Debe tener al menos un ataque");
+    }
+
+    const sizeMap = sizeValue.split('x').map(Number);
 
     const file = fileInput.files[0];
     const formData = new FormData();
@@ -825,6 +920,11 @@ async function createEnemy() {
             body: formData
         });
 
+        if (!uploadRes.ok) {
+            console.error("Error HTTP en upload");
+            return;
+        }
+
         const uploadData = await uploadRes.json();
 
         if (!uploadData.success) {
@@ -832,25 +932,24 @@ async function createEnemy() {
             return;
         }
 
-        size_map = size.split('x').map(Number);
-
         socket.emit("create_enemy", {
             campaign_code: campaignCode,
-            name: name,
-            hp: hp,
-            ac: ac,
+            name,
+            hp,
             max_hp: maxHp,
+            ac,
             asset: uploadData.asset_url,
-            size: size_map,
-            attributes: attributes,
-            attacks: attacks
+            size: sizeMap,
+            attributes,
+            attacks
         });
 
-        // Limpieza opcional de formulario
+        // Limpieza
         document.getElementById('enemy-name').value = "";
         document.getElementById('enemy-hp').value = "";
         document.getElementById('enemy-max-hp').value = "";
         document.getElementById('enemy-asset').value = "";
+        document.getElementById('attacks-container').innerHTML = "";
 
     } catch (err) {
         console.error("Error en upload:", err);
@@ -864,13 +963,14 @@ async function createEnemy() {
 function renderDMEntities(data) {
     const playerList = document.getElementById('dm-player-list');
     const enemyList = document.getElementById('dm-enemy-list');
-
+    dm_player_list = [];   // ← resetear antes de push
+    dm_enemies_list = [];
     // Render jugadores
     playerList.innerHTML = '';
     data.characters.forEach(char => {
         const hpPercent = Math.round((char.hp / char.max_hp) * 100);
         const hpColor = hpPercent > 50 ? '#4caf50' : hpPercent > 25 ? '#ff9800' : '#f44336';
-        dm_player_list.push(char)
+        dm_player_list.push(char);
         const li = document.createElement('li');
         li.className = 'feature-item';
         li.dataset.charId = char.id; // ← añadir
@@ -894,12 +994,13 @@ function renderDMEntities(data) {
     // Render enemigos
     enemyList.innerHTML = '';
     data.enemies.forEach(enemy => {
+        dm_enemies_list.push(enemy);
         const hpPercent = Math.round((enemy.hp / enemy.max_hp) * 100);
         const hpColor = hpPercent > 50 ? '#4caf50' : hpPercent > 25 ? '#ff9800' : '#f44336';
 
         const li = document.createElement('li');
         li.className = 'feature-item';
-        li.dataset.charId = char.id;
+        li.dataset.charId = enemy.id;
         li.innerHTML = `
             <div class="entity-header">
                 <span class="entity-name">${enemy.name}</span>
@@ -916,8 +1017,74 @@ function renderDMEntities(data) {
     if (data.enemies.length === 0) {
         enemyList.innerHTML = '<li class="feature-item" style="color:#888;">Sin enemigos creados</li>';
     }
+    renderCombatTab();
 }
+function renderCombatTab() {
 
+    const container = document.getElementById("combat-selection-container");
+    container.innerHTML = "";
+
+    const sectionPlayers = document.createElement("div");
+    sectionPlayers.innerHTML = "<h3>Jugadores</h3>";
+
+    dm_player_list.forEach(player => {
+        sectionPlayers.appendChild(createCombatItem(player, "player"));
+    });
+
+    const sectionEnemies = document.createElement("div");
+    sectionEnemies.innerHTML = "<h3>Enemigos</h3>";
+
+    dm_enemies_list.forEach(enemy => {
+        sectionEnemies.appendChild(createCombatItem(enemy, "enemy"));
+    });
+
+    container.appendChild(sectionPlayers);
+    container.appendChild(sectionEnemies);
+}
+function createCombatItem(entity, type) {
+
+    const div = document.createElement("div");
+    div.className = "combat-item";
+    div.dataset.id = entity.id;
+    div.dataset.type = type;
+
+    div.innerHTML = `
+        <img src="${entity.asset_url}" width="40">
+        <span>${entity.name}</span>
+        <span>HP: ${entity.hp}/${entity.max_hp}</span>
+    `;
+
+    div.onclick = () => toggleCombatSelection(div, entity.id);
+
+    return div;
+}
+function toggleCombatSelection(element, id) {
+
+    if (selectedCombatants.has(id)) {
+        selectedCombatants.delete(id);
+        element.classList.remove("selected");
+    } else {
+        selectedCombatants.add(id);
+        element.classList.add("selected");
+    }
+}
+function startCombat() {
+
+    if (selectedCombatants.size < 2) {
+        console.warn("Se requieren al menos 2 combatientes");
+        return;
+    }
+
+    socket.emit("start_combat", {
+        campaign_code: campaignCode,
+        combatants: Array.from(selectedCombatants)
+        
+    });
+
+    selectedCombatants.clear();
+    document.querySelectorAll(".selected")
+        .forEach(el => el.classList.remove("selected"));
+}
 function setupDMControls() {
     // Click en token → seleccionar
     document.addEventListener('click', (e) => {
@@ -1080,53 +1247,53 @@ let _pendingGiveItemId = null;
 
 
 function openGiveItemPopup(itemId, itemName) {
-  _pendingGiveItemId = itemId;
+    _pendingGiveItemId = itemId;
 
-  document.getElementById('give-item-name').textContent = `Objeto: ${itemName || itemId}`;
+    document.getElementById('give-item-name').textContent = `Objeto: ${itemName || itemId}`;
 
-  const playerListEl = document.getElementById('give-item-player-list');
-  playerListEl.innerHTML = '';
+    const playerListEl = document.getElementById('give-item-player-list');
+    playerListEl.innerHTML = '';
 
-  if (dm_player_list.length === 0) {
-    playerListEl.innerHTML = '<p style="color:#888; font-size:0.85rem;">Sin jugadores conectados.</p>';
-  } else {
-    dm_player_list.forEach(char => {
-      const btn = document.createElement('button');
-      btn.style.cssText = `
+    if (dm_player_list.length === 0) {
+        playerListEl.innerHTML = '<p style="color:#888; font-size:0.85rem;">Sin jugadores conectados.</p>';
+    } else {
+        dm_player_list.forEach(char => {
+            const btn = document.createElement('button');
+            btn.style.cssText = `
         background:#0d1117; border:1px solid #d4a853; color:#d4a853;
         padding:10px 14px; border-radius:8px; cursor:pointer;
         font-family:'Cinzel',serif; font-size:0.9rem; text-align:left;
         transition:background 0.2s; width:100%;
       `;
-      btn.textContent = `🧙 ${char.name}`;
-      btn.onmouseover = () => btn.style.background = '#1f1a0e';
-      btn.onmouseout  = () => btn.style.background = '#0d1117';
-      btn.onclick = () => confirmGiveItem(char.id, char.name);
-      playerListEl.appendChild(btn);
-    });
-  }
+            btn.textContent = `🧙 ${char.name}`;
+            btn.onmouseover = () => btn.style.background = '#1f1a0e';
+            btn.onmouseout = () => btn.style.background = '#0d1117';
+            btn.onclick = () => confirmGiveItem(char.id, char.name);
+            playerListEl.appendChild(btn);
+        });
+    }
 
-  document.getElementById('give-item-overlay').style.display = 'flex';
+    document.getElementById('give-item-overlay').style.display = 'flex';
 }
 
 function closeGiveItemPopup() {
-  document.getElementById('give-item-overlay').style.display = 'none';
-  _pendingGiveItemId = null;
+    document.getElementById('give-item-overlay').style.display = 'none';
+    _pendingGiveItemId = null;
 }
 
 function confirmGiveItem(targetCharId, targetName) {
-  if (!_pendingGiveItemId || !targetCharId) return;
+    if (!_pendingGiveItemId || !targetCharId) return;
 
-  socket.emit('dm_give_item', {
-    campaign_code: campaignCode,
-    item_instance_id: _pendingGiveItemId,
-    target_player_id: targetCharId,
-  });
+    socket.emit('dm_give_item', {
+        campaign_code: campaignCode,
+        item_instance_id: _pendingGiveItemId,
+        target_player_id: targetCharId,
+    });
 
     closeGiveItemPopup();
 }
 
 // Reemplaza la función anterior
 function giveItemToPlayer(itemId, itemName) {
-  openGiveItemPopup(itemId, itemName);
+    openGiveItemPopup(itemId, itemName);
 }

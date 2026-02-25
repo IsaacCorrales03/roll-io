@@ -39,23 +39,23 @@
             <p class="loading-status" id="loading-status">Cargando mundo...</p>
         </div>
     </div>
-        <div id="give-item-overlay"
-            style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
-            <div
-                style="background:#1a1a2e; border:1px solid #d4a853; border-radius:12px; padding:28px 32px; min-width:320px; max-width:420px; box-shadow:0 0 40px rgba(212,168,83,0.3);">
-                <h3 style="font-family:'Cinzel',serif; color:#d4a853; margin:0 0 6px 0; font-size:1.2rem;">Dar objeto a
-                    jugador</h3>
-                <p id="give-item-name" style="color:#aaa; margin:0 0 18px 0; font-size:0.85rem;"></p>
+    <div id="give-item-overlay"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:#1a1a2e; border:1px solid #d4a853; border-radius:12px; padding:28px 32px; min-width:320px; max-width:420px; box-shadow:0 0 40px rgba(212,168,83,0.3);">
+            <h3 style="font-family:'Cinzel',serif; color:#d4a853; margin:0 0 6px 0; font-size:1.2rem;">Dar objeto a
+                jugador</h3>
+            <p id="give-item-name" style="color:#aaa; margin:0 0 18px 0; font-size:0.85rem;"></p>
 
-                <div id="give-item-player-list"
-                    style="display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto;"></div>
+            <div id="give-item-player-list"
+                style="display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto;"></div>
 
-                <div style="display:flex; justify-content:flex-end; margin-top:20px;">
-                    <button onclick="closeGiveItemPopup()"
-                        style="background:transparent; border:1px solid #555; color:#aaa; padding:8px 18px; border-radius:6px; cursor:pointer; font-size:0.85rem;">Cancelar</button>
-                </div>
+            <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+                <button onclick="closeGiveItemPopup()"
+                    style="background:transparent; border:1px solid #555; color:#aaa; padding:8px 18px; border-radius:6px; cursor:pointer; font-size:0.85rem;">Cancelar</button>
             </div>
         </div>
+    </div>
     <!-- Animated background blobs -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none" style="z-index: 0;">
         <div id="blob1" class="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl"></div>
@@ -257,16 +257,11 @@
                         <label>CHA</label><input type="number" id="enemy-cha" value="10">
                     </div>
                     <div class="enemy-attacks">
-                        <h4>Ataque Principal</h4>
-                        
-                        <input type="text" id="attack-name" placeholder="Nombre del ataque">
-                        <input type="number" id="attack-bonus" placeholder="Bonus al ataque">
-                        <input type="text" id="attack-damage" placeholder="Daño (ej: 1d6+2)">
-                        
-                        <select id="attack-type">
-                            <option value="melee">Melee</option>
-                            <option value="ranged">Ranged</option>
-                        </select>
+                        <h4>Lista de Ataques</h4>
+
+                        <div id="attacks-container"></div>
+
+                        <button type="button" onclick="addAttack()">+ Añadir Ataque</button>
                     </div>
                     <input type="file" id="enemy-asset" accept="image/*">
                     <button onclick="createEnemy()">Crear y Añadir al Mapa</button>
@@ -275,9 +270,19 @@
             </div>
 
             <!-- COMBATE -->
+            <!-- COMBATE -->
             <div id="dm-tab-combat" class="tab" style="display:none;">
-                <div class="section-title">Combate</div>
-                <p style="opacity:.6">Sistema de iniciativa pendiente.</p>
+                <div class="section-title">Seleccionar Combatientes</div>
+                <p style="opacity:.6; font-size:0.85rem; margin-bottom:12px;">
+                    Selecciona al menos 2 entidades para iniciar el combate.
+                </p>
+
+                <div id="combat-selection-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+
+                <button onclick="startCombat()" style="margin-top:16px; width:100%; padding:10px; background:#7f1d1d; border:1px solid #ef4444;
+               color:#fca5a5; border-radius:8px; cursor:pointer; font-family:'Cinzel',serif; font-size:0.9rem;">
+                    ⚔️ Iniciar Combate
+                </button>
             </div>
             <div id="dm-tab-items" class="tab" style="display:none;">
                 <div class="section-title">Items</div>

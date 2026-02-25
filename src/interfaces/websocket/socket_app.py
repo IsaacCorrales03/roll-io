@@ -9,6 +9,9 @@ from flask_socketio import emit, join_room
 from numpy import character
 
 # Models and queries
+from src.core.combat.phase import Phase
+from src.core.game.Action import AttackAction, EndTurnAction, StartCombatAction
+from src.core.game.commands import AttackCommand, EndTurnCommand, StartCombatCommand
 from src.shared.utils.items_utils import serialize_item_instance, item_instances, ItemInstance
 from src.core.character.character import Character
 from src.shared.utils.game_state_builder import build_game_state
@@ -19,7 +22,7 @@ from src.core.game.querys import GetArmorClass, GetEntities
 from src.features.auth.application.auth_service import AuthService
 from src.features.campaigns.infrastructure.mysql_campaign_repository import MySQLCampaignRepository
 from src.features.characters.infrastructure.character_repository import CharacterRepository
-from src.shared.utils.tokens_utils import normalize_token
+from src.shared.utils.tokens_utils import serialize_token
 
 def register_socket_handlers(
     socketio,
@@ -426,9 +429,22 @@ def register_socket_handlers(
 
     @socketio.on("create_enemy")
     def handle_create_enemy(data):
+        from uuid import uuid4
+
         token_id = str(uuid4())
-        spawn_x = 0
-        spawn_y = 0
+        spawn_x, spawn_y = 0, 0
+
+        required_fields = ["name", "hp", "max_hp", "ac", "asset", "size", "attributes", "attacks"]
+        for field in required_fields:
+            if field not in data:
+                emit("error", {"message": f"Missing field: {field}"})
+                return
+
+        state = game_states_dict.get(data["campaign_code"])
+        if not state:
+            emit("error", {"message": "Invalid campaign"})
+            return
+
         event = Event(
             type="create_enemy",
             payload={
@@ -438,39 +454,33 @@ def register_socket_handlers(
                 "max_hp": data["max_hp"],
                 "ac": data["ac"],
                 "asset_url": data["asset"],
-                "size": data["size"],
+                "size": tuple(data["size"]),
+                "attributes": data["attributes"],
+                "attacks": data["attacks"],
+                "position": (spawn_x, spawn_y)
             },
             cancelable=False
         )
-        state = game_states_dict[data["campaign_code"]]
+
         try:
             state.dispatch(event)
-        except Exception as e:  
+        except Exception as e:
             import traceback
             traceback.print_exc()
             emit("error", {"message": str(e)})
             return
-        
-        socketio.emit("enemy_created", {
-            "id": token_id,
-            "name": data["name"],
-            "hp": data["hp"],
-            "max_hp": data["max_hp"],
-            "asset": data["asset"],
-            "size": data["size"],
-            "x": spawn_x,
-            "y": spawn_y
-        }, to=data["campaign_code"])
+
+        print(event.payload)
+        # En create_enemy:
+        socketio.emit("enemy_created", serialize_token(state.tokens[token_id]), to=data["campaign_code"])
+
 
     @socketio.on("get_tokens")
     def handle_get_tokens(data):
         state = game_states_dict[data["campaign_code"]]
         tokens = state.tokens.values()
         
-        emit("tokens_sync", [
-            normalize_token(token)
-            for token in tokens
-        ])
+        emit("tokens_sync", [serialize_token(t) for t in state.tokens.values()])
 
     @socketio.on("toggle_equip_item")
     def toggle_equip_item(data):
@@ -631,3 +641,37 @@ def register_socket_handlers(
             return
         print(character.inventory)
         emit("dm_give_item_success", {"player_id": target_player_id})
+
+    @socketio.on("start_combat")
+    def start_combat(data):
+        print(data)
+        participants = data["combatants"]
+        start_cmd = StartCombatCommand(
+            participant_ids=participants
+        )
+        state = get_game_state(data["campaign_code"])
+        StartCombatAction(start_cmd).execute(state)
+        emit("combat_started")
+
+    @socketio.on("player_attack")
+    def handle_attack(data):
+        state = get_game_state(data["campaig_code"])
+        attack_command = AttackCommand(
+            actor_id=data["character_id"],
+            target_id=data["target_id"],
+            mode=data["attack_mode"],
+            advantage=data["advantage"],
+            disadvantage=data["disadvantage"]
+        )
+        result = AttackAction(attack_command).execute(state)
+
+        socketio.emit("attack_result", result.payload)
+
+        next_turn(state, data["character_id"])
+
+    def next_turn(game_state, actor_id):
+        end_turn_cmd = EndTurnCommand(actor_id=actor_id)
+        EndTurnAction(end_turn_cmd).execute(game_state)
+        if game_state.current_phase != Phase.COMBAT:
+            socketio.emit("combat_finished")
+        return

@@ -50,4 +50,7 @@ def build_game_state(campaign_code: str, campaigns, character_repository) -> Gam
     state.register_query_handler(GetArmorClass, GetArmorClassHandler())
     state.register_query_handler(GetStatModifier, GetStatModifierHandler())
     state.register_query_handler(GetEntities, GetEntitiesHandler())
+    state.dispatcher.register("combat_ended", CombatEndHandler())
+    state.dispatcher.register("turn_ended", TurnEndedHandler())
+    state.dispatcher.register("combat_started", CombatStartedHandler())
     return state

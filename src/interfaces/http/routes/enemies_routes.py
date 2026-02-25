@@ -37,5 +37,5 @@ def upload_enemy_asset():
 
     return jsonify({
         "success": True,
-        "asset_url": f"/storage/uploads/enemies/{filename}"
+        "asset_url": f"/storage/enemies/{filename}"
     })

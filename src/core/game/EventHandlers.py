@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from src.core.combat.phase import Phase
-from src.core.character.enemy import Enemy
+from src.core.character.enemy import Enemy, EnemyAttack
 from src.features.world.domain.token import Token
 from src.core.game.Event import Event, EventContext, EventHandler, GameState
 from src.core.character.ProgresionSystem import ProgressionSystem
@@ -238,38 +238,42 @@ class CreateEnemyHandler(EventHandler):
     def handle(self, event: Event, state: GameState) -> None:
         if event.type != "create_enemy":
             return
-        
+
+        enemy_attacks = [
+            EnemyAttack(**attack_dict)
+            for attack_dict in event.payload.get("attacks", [])
+        ]
+
         enemy = Enemy(
             id=event.payload["id"],
             name=event.payload["name"],
             hp=event.payload["hp"],
-            size=event.payload["size"],
             max_hp=event.payload["max_hp"],
             ac=event.payload["ac"],
-            asset_url=event.payload["asset_url"]
+            asset_url=event.payload["asset_url"],
+            size=tuple(event.payload["size"]),
+            attributes=event.payload.get("attributes"),
+            attacks=enemy_attacks
         )
+
         state.enemies[enemy.id] = enemy
+
         enemy_token = Token(
-            id=enemy.id,  # Usamos el mismo UUID para el token
+            id=enemy.id,
             actor_id=enemy.id,
-            x=0,  # posición inicial por defecto
+            x=0,
             y=0,
             size=enemy.size,
             texture_url=enemy.asset_url,
             label=enemy.name
         )
+
         state.add_token(enemy_token.to_dict())
 
         state.dispatch(Event(
             type="enemy_created",
             context=EventContext(actor_id=enemy.id),
-            payload={
-                "name": event.payload["name"],
-                "hp": event.payload["hp"],
-                "max_hp": event.payload["max_hp"],
-                "ac": event.payload["ac"],
-                "asset_url": event.payload["asset_url"]
-            },
+            payload=event.payload,
             cancelable=False
         ))
 
