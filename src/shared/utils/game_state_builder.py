@@ -26,6 +26,24 @@ def build_game_state(campaign_code: str, campaigns, character_repository) -> Gam
 
         # 🔥 Cargar inventario desde DB
         inventory_rows = character_repository.get_inventory(char_id)
+        # 🔥 PROFICIENCIES
+        profs = character_repository.get_proficiencies(char_id)
+
+        character.saving_throw_proficiencies = set(
+            profs.get("saving_throw_proficiencies", [])
+        )
+
+        character.weapon_proficiencies = set(
+            profs.get("weapon_proficiencies", [])
+        )
+
+        character.armor_proficiencies = set(
+            profs.get("armor_proficiencies", [])
+        )
+
+        character.skill_proficiencies = set(
+            profs.get("skill_proficiencies", [])
+        )
 
         # Delegar al dominio
         character.load_inventory(inventory_rows)
@@ -53,4 +71,5 @@ def build_game_state(campaign_code: str, campaigns, character_repository) -> Gam
     state.dispatcher.register("combat_ended", CombatEndHandler())
     state.dispatcher.register("turn_ended", TurnEndedHandler())
     state.dispatcher.register("combat_started", CombatStartedHandler())
+
     return state

@@ -40,7 +40,6 @@ class CharacterRepository:
                     character["hp"]["max"],
                     defalut_token
                 ))
-                print(character)
                 # Saving throws
                 for ability in character.get("saving_throw_proficiencies", []):
                     cursor.execute("""
@@ -234,8 +233,15 @@ class CharacterRepository:
             )
             armors = [row["armor_key"] for row in cursor.fetchall()]
 
+            cursor.execute(
+                "SELECT skill_key FROM character_skill_proficiencies WHERE character_id = %s",
+                (character_id,)
+            )
+            skills = [row["skill_key"] for row in cursor.fetchall()]
+
         return {
             "saving_throw_proficiencies": saving_throws,
             "weapon_proficiencies": weapons,
             "armor_proficiencies": armors,
+            "skill_proficiencies": skills,
         }

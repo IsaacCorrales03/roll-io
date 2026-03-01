@@ -6,301 +6,416 @@
     <title>Game - Chronicle20</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/game.css') }}">
-    <style>
-
-    </style>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;500;600;700&family=IM+Fell+English:ital@0;1&family=Uncial+Antiqua&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 
 <body class="bg-slate-950 text-white">
+
+    <!-- ══════════════════════════════════════
+         LOADING SCREEN
+    ══════════════════════════════════════ -->
     <div id="loading-screen">
         <div class="loading-blobs">
-            <div class="loading-blob" id="blob1"></div>
-            <div class="loading-blob" id="blob2"></div>
+            <div class="loading-blob"></div>
+            <div class="loading-blob"></div>
         </div>
-        <!-- Popup: Seleccionar jugador para dar item -->
-
         <div class="loading-content">
-            <!-- Logo / Ícono -->
             <div class="loading-icon">⚔️</div>
-
-            <!-- Título -->
             <h1 class="loading-title">CHRONICLE<span>20</span></h1>
             <div class="loading-divider"></div>
-
-            <!-- Frase aleatoria -->
             <p class="loading-quote" id="loading-quote">Preparando los dados del destino...</p>
-
-            <!-- Barra de progreso -->
             <div class="loading-bar-track">
                 <div class="loading-bar-fill" id="loading-bar"></div>
             </div>
             <p class="loading-status" id="loading-status">Cargando mundo...</p>
         </div>
     </div>
-    <div id="give-item-overlay"
-        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
-        <div
-            style="background:#1a1a2e; border:1px solid #d4a853; border-radius:12px; padding:28px 32px; min-width:320px; max-width:420px; box-shadow:0 0 40px rgba(212,168,83,0.3);">
-            <h3 style="font-family:'Cinzel',serif; color:#d4a853; margin:0 0 6px 0; font-size:1.2rem;">Dar objeto a
-                jugador</h3>
-            <p id="give-item-name" style="color:#aaa; margin:0 0 18px 0; font-size:0.85rem;"></p>
 
+    <!-- ══════════════════════════════════════
+         GIVE ITEM OVERLAY
+    ══════════════════════════════════════ -->
+    <div id="give-item-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8);
+               z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:linear-gradient(160deg,#0e0c14,#07060a);
+                    border:1px solid rgba(212,168,83,0.35); border-radius:12px;
+                    padding:28px 32px; min-width:340px; max-width:420px;
+                    box-shadow:0 0 80px rgba(107,63,160,0.2), 0 24px 64px rgba(0,0,0,0.9);">
+            <h3
+                style="font-family:'Cinzel',serif;color:#d4a853;margin:0 0 4px;font-size:1.2rem;letter-spacing:1px;text-transform:uppercase;">
+                Dar objeto</h3>
+            <p id="give-item-name"
+                style="color:#9a8060;margin:0 0 20px;font-family:'IM Fell English',serif;font-style:italic;font-size:.9rem;">
+            </p>
             <div id="give-item-player-list"
-                style="display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto;"></div>
-
-            <div style="display:flex; justify-content:flex-end; margin-top:20px;">
-                <button onclick="closeGiveItemPopup()"
-                    style="background:transparent; border:1px solid #555; color:#aaa; padding:8px 18px; border-radius:6px; cursor:pointer; font-size:0.85rem;">Cancelar</button>
-            </div>
-        </div>
-    </div>
-    <!-- Animated background blobs -->
-    <div class="absolute inset-0 overflow-hidden pointer-events-none" style="z-index: 0;">
-        <div id="blob1" class="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl"></div>
-        <div id="blob2" class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"></div>
-    </div>
-
-    <div class="game-layout" style="position: relative; z-index: 1;">
-
-        <!-- WRAPPER RELATIVO PARA MAPA Y CHAT -->
-        <div style="position: relative; height: calc(100vh - 32px);">
-            <!-- MAPA CON PAN/ZOOM -->
-            <div class="map-viewport" id="map-viewport">
-                <div class="map-container" id="map-container">
-                    <!-- Canvas del mapa -->
-                    <canvas id="map-canvas"></canvas>
-
-                    <!-- Grid overlay -->
-                    <canvas id="grid-canvas" class="grid-overlay"></canvas>
-
-                    <!-- Tokens de jugadores -->
-                    <div id="tokens-container">
-
-                    </div>
-
-                </div>
-
-                <!-- Token Preview (fuera del map-container para evitar transformaciones) -->
-                <div id="token-preview" class="preview" style="display: none;"></div>
-
-                <!-- Controles del mapa -->
-                <div class="map-controls">
-                    <button class="map-control-btn" onclick="resetMapView()" title="Reset View">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                    </button>
-                    <button class="map-control-btn" onclick="toggleGrid()" title="Toggle Grid">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Info del mapa -->
-                <div class="map-info" id="map-info" style="display:none;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <svg class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        <strong id="map-scene-name"></strong>
-                    </div>
-                    <div style="margin-top: 6px; font-size: 11px; opacity: 0.6;" id="map-grid-info"></div>
-                </div>
-            </div>
-
-            <!-- CHAT WIDGET (fuera del map-viewport pero superpuesto) -->
-            <div class="chat-widget">
-                <!-- Chat colapsado -->
-                <div class="chat-collapsed" id="chat-collapsed">
-                    <input type="text" class="chat-input-collapsed" id="chat-trigger"
-                        placeholder="💬 Presiona T o Enter para chatear..." readonly onclick="openChat()">
-                    <div class="chat-badge" id="chat-badge" style="display: none;">0</div>
-                </div>
-
-                <!-- Chat expandido -->
-                <div class="chat-expanded" id="chat-expanded" style="display: none;">
-                    <div class="chat-header">
-                        <div class="chat-title">💬 Chat</div>
-                        <button class="chat-close" onclick="closeChat()">✕</button>
-                    </div>
-
-                    <div class="chat-messages" id="chat-messages"></div>
-
-                    <form class="chat-input-form" id="chat-form">
-                        <input type="text" class="chat-input-expanded" id="chat-input"
-                            placeholder="Escribe un mensaje..." autocomplete="off">
-                        <button type="submit" class="chat-send-btn">Enviar</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- PANEL DERECHO (Character Sheet) -->
-        <aside class="side-panel" id="player-panel" style="display: none;">
-            <div class="tab-buttons">
-                <button onclick="openTab('info')" class="tab-btn active" id="tab-btn-info">Info</button>
-                <button onclick="openTab('gear')" class="tab-btn" id="tab-btn-gear">Equipo</button>
-                <button onclick="openTab('features')" class="tab-btn" id="tab-btn-features">Habilidades</button>
-                <button onclick="openTab('inventory')" class="tab-btn" id="tab-btn-inventory">Inventario</button>
-            </div>
-
-            <!-- TAB: Info -->
-            <div id="tab-info" class="tab">
-                <h2 id="char-name">
-                    </h3>
-                    <p id="char-meta" class="text-sm text-slate-400 mb-6 font-medium"></p>
-
-                    <div class="section-title">HP &amp; Recursos</div>
-                    <div class="hp-ac-grid">
-                        <div class="hp-item">
-                            <div class="stat-label">Puntos de Vida</div>
-                            <div id="char-hp" class="text-2xl font-bold text-green-400" style="margin-top: 8px;">--/--
-                            </div>
-                        </div>
-                        <div class="ac-item">
-                            <div class="stat-label">Clase de Armadura</div>
-                            <div id="char-ac" class="text-2xl font-bold text-blue-400" style="margin-top: 8px;">--</div>
-                        </div>
-                    </div>
-
-                    <!-- Peso -->
-                    <div class="weight-row">
-                        <div style="flex: 1;">
-                            <div class="weight-label">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2.5" style="opacity:.5">
-                                    <path
-                                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                                </svg>
-                                Peso Máximo a Cargar
-                            </div>
-                            <div class="weight-bar-wrap">
-                                <div class="weight-bar-fill" id="weight-bar" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div id="char-weight" style="margin-left: 12px; white-space: nowrap;">-- / -- lb</div>
-                    </div>
-
-                    <div class="section-title">Atributos</div>
-                    <div id="stats" class="stat-grid"></div>
-            </div>
-
-            <!-- TAB: Inventory -->
-            <div id="tab-inventory" class="tab" style="display: none;">
-                <div class="section-title">Inventario</div>
-                <ul id="inventory-list" class="feature-list"></ul>
-            </div>
-
-            <!-- TAB: Gear -->
-            <div id="tab-gear" class="tab" style="display: none;">
-                <div class="section-title">Equipo Equipado</div>
-                <ul id="gear-list" class="feature-list"></ul>
-            </div>
-
-            <!-- TAB: Features -->
-            <div id="tab-features" class="tab" style="display: none;">
-                <div class="section-title">Habilidades de Clase</div>
-                <ul id="features-list" class="feature-list"></ul>
-            </div>
-        </aside>
-        <aside class="dm-panel" id="dm-panel" style="display:none;">
-
-            <div class="tab-buttons">
-                <button onclick="openDMTab('map')" class="tab-btn active" id="dm-tab-btn-map">Mapa</button>
-                <button onclick="openDMTab('entities')" class="tab-btn" id="dm-tab-btn-entities">Entidades</button>
-                <button onclick="openDMTab('combat')" class="tab-btn" id="dm-tab-btn-combat">Combate</button>
-                <button onclick="openDMTab('items')" class="tab-btn" id="dm-tab-btn-items">Items</button> <!-- NUEVO -->
-
-            </div>
-
-            <!-- MAPA -->
-            <div id="dm-tab-map" class="tab">
-                <div class="section-title">Mapa</div>
-                <p style="opacity:.6">Sin herramientas todavía.</p>
-            </div>
-
-            <!-- ENTIDADES -->
-            <div id="dm-tab-entities" class="tab" style="display:none;">
-
-                <div class="section-title">Jugadores</div>
-                <ul id="dm-player-list" class="feature-list"></ul>
-
-                <div class="section-title" style="margin-top:20px;">Enemigos</div>
-                <ul id="dm-enemy-list" class="feature-list"></ul>
-
-                <div class="section-title" style="margin-top:20px;">Crear Enemigo</div>
-
-                <div class="dm-form">
-                    <input type="text" id="enemy-name" placeholder="Nombre">
-                    <input type="number" id="enemy-hp" placeholder="HP">
-                    <input type="number" id="enemy-max-hp" placeholder="Max HP">
-                    <input type="number" id="enemy-ac" placeholder="Clase de Armadura">
-                    <select id="enemy-size">
-                        <option value="1x1">1x1</option>
-                        <option value="1x2">1x2</option>
-                        <option value="2x2">2x2</option>
-                        <option value="3x3">3x3</option>
-                    </select>
-                    <div class="enemy-attributes">
-                        <label>STR</label><input type="number" id="enemy-str" value="10">
-                        <label>DEX</label><input type="number" id="enemy-dex" value="10">
-                        <label>CON</label><input type="number" id="enemy-con" value="10">
-                        <label>INT</label><input type="number" id="enemy-int" value="10">
-                        <label>WIS</label><input type="number" id="enemy-wis" value="10">
-                        <label>CHA</label><input type="number" id="enemy-cha" value="10">
-                    </div>
-                    <div class="enemy-attacks">
-                        <h4>Lista de Ataques</h4>
-
-                        <div id="attacks-container"></div>
-
-                        <button type="button" onclick="addAttack()">+ Añadir Ataque</button>
-                    </div>
-                    <input type="file" id="enemy-asset" accept="image/*">
-                    <button onclick="createEnemy()">Crear y Añadir al Mapa</button>
-                </div>
-
-            </div>
-
-            <!-- COMBATE -->
-            <!-- COMBATE -->
-            <div id="dm-tab-combat" class="tab" style="display:none;">
-                <div class="section-title">Seleccionar Combatientes</div>
-                <p style="opacity:.6; font-size:0.85rem; margin-bottom:12px;">
-                    Selecciona al menos 2 entidades para iniciar el combate.
-                </p>
-
-                <div id="combat-selection-container" style="display:flex; flex-direction:column; gap:8px;"></div>
-
-                <button onclick="startCombat()" style="margin-top:16px; width:100%; padding:10px; background:#7f1d1d; border:1px solid #ef4444;
-               color:#fca5a5; border-radius:8px; cursor:pointer; font-family:'Cinzel',serif; font-size:0.9rem;">
-                    ⚔️ Iniciar Combate
+                style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;"></div>
+            <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+                <button onclick="closeGiveItemPopup()" style="background:transparent;border:1px solid rgba(212,168,83,0.2);color:#9a8060;
+                           padding:9px 20px;border-radius:6px;cursor:pointer;font-family:'Cinzel',serif;
+                           font-size:.82rem;letter-spacing:.5px;text-transform:uppercase;transition:all .18s ease;">
+                    Cancelar
                 </button>
             </div>
-            <div id="dm-tab-items" class="tab" style="display:none;">
-                <div class="section-title">Items</div>
+        </div>
+    </div>
 
-                <!-- Buscador -->
-                <input type="text" id="item-search" placeholder="Buscar item..."
-                    style="width:100%; margin-bottom:10px; padding:5px;">
+    <!-- ══════════════════════════════════════
+         AMBIENT BACKGROUND BLOBS
+    ══════════════════════════════════════ -->
+    <div style="position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:0;">
+        <div id="blob1" class="absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl"
+            style="background:rgba(107,63,160,.07);"></div>
+        <div id="blob2" class="absolute bottom-0 right-1/4 w-96 h-96 rounded-full blur-3xl"
+            style="background:rgba(139,26,26,.06);"></div>
+    </div>
 
-                <!-- Contenedor de cartas -->
-                <div id="dm-item-list" class="feature-list" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+    <!-- ══════════════════════════════════════
+         MAP VIEWPORT
+    ══════════════════════════════════════ -->
+    <div class="map-viewport" id="map-viewport" style="z-index:1;">
+        <div class="map-container" id="map-container">
+            <canvas id="map-canvas"></canvas>
+            <canvas id="grid-canvas" class="grid-overlay"></canvas>
+            <div id="tokens-container"></div>
+        </div>
+        <div id="token-preview" class="preview" style="display:none;"></div>
+
+        <!-- Map Controls (bottom-right) -->
+        <div class="map-controls">
+            <button class="map-control-btn" onclick="resetMapView()" title="Centrar vista">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+            <button class="map-control-btn" onclick="toggleGrid()" title="Toggle cuadrícula">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Map info (top-left) -->
+        <div class="map-info" id="map-info" style="display:none;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style="color:#d4a853;flex-shrink:0;">
+                    <path fill-rule="evenodd"
+                        d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z"
+                        clip-rule="evenodd" />
+                </svg>
+                <strong id="map-scene-name"
+                    style="font-family:'Cinzel',serif;font-size:13px;letter-spacing:1px;"></strong>
+            </div>
+            <div style="margin-top:5px;font-size:11px;opacity:.4;font-family:'Cinzel',serif;letter-spacing:.5px;"
+                id="map-grid-info"></div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         CHAT WIDGET
+    ══════════════════════════════════════ -->
+    <div class="chat-widget" style="z-index:300;">
+        <div class="chat-collapsed" id="chat-collapsed">
+            <input type="text" class="chat-input-collapsed" id="chat-trigger"
+                placeholder="⚔ Presiona T · Enter para chatear..." readonly onclick="openChat()">
+            <div class="chat-badge" id="chat-badge" style="display:none;">0</div>
+        </div>
+        <div class="chat-expanded" id="chat-expanded" style="display:none;">
+            <div class="chat-header">
+                <div class="chat-title">📜 Pergamino de Mensajes</div>
+                <button class="chat-close" onclick="closeChat()">✕</button>
+            </div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <form class="chat-input-form" id="chat-form">
+                <input type="text" class="chat-input-expanded" id="chat-input" placeholder="Escribe en el pergamino..."
+                    autocomplete="off">
+                <button type="submit" class="chat-send-btn">Enviar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         PANEL TOGGLE BUTTONS
+         (fixed at right edge, independent of panels)
+    ══════════════════════════════════════ -->
+
+    <!-- Player panel toggle — centered vertically -->
+    <button id="toggle-player-panel" class="panel-toggle" style="display:none; top:50%; transform:translateY(-50%);"
+        onclick="togglePanel('player-panel','toggle-player-panel')" title="Hoja de Personaje">
+        <div class="panel-toggle-rune"></div>
+        <span class="panel-toggle-icon">‹</span>
+        <div class="panel-toggle-rune"></div>
+    </button>
+
+    <!-- DM panel toggle — upper third -->
+    <button id="toggle-dm-panel" class="panel-toggle" style="display:none; top:35%; transform:translateY(-50%);"
+        onclick="togglePanel('dm-panel','toggle-dm-panel')" title="Panel del Dungeon Master">
+        <div class="panel-toggle-rune"></div>
+        <span class="panel-toggle-icon">‹</span>
+        <div class="panel-toggle-rune"></div>
+    </button>
+
+    <!-- Combat panel toggle — lower third -->
+    <button id="toggle-combat-panel" class="panel-toggle" style="display:none; top:65%; transform:translateY(-50%);"
+        onclick="togglePanel('combat-panel','toggle-combat-panel')" title="Panel de Combate">
+        <div class="panel-toggle-rune"></div>
+        <span class="panel-toggle-icon">‹</span>
+        <div class="panel-toggle-rune"></div>
+    </button>
+
+    <!-- ══════════════════════════════════════
+         PLAYER PANEL
+    ══════════════════════════════════════ -->
+    <aside class="side-panel panel-collapsed" id="player-panel" style="display:none;">
+        <div class="tab-buttons">
+            <button onclick="openTab('info')" class="tab-btn active" id="tab-btn-info">Info</button>
+            <button onclick="openTab('gear')" class="tab-btn" id="tab-btn-gear">Equipo</button>
+            <button onclick="openTab('features')" class="tab-btn" id="tab-btn-features">Dones</button>
+            <button onclick="openTab('inventory')" class="tab-btn" id="tab-btn-inventory">Inventario</button>
+        </div>
+
+        <!-- TAB: INFO -->
+        <div id="tab-info" class="tab">
+            <div class="char-header">
+                <h2 id="char-name">—</h2>
+                <p id="char-meta"></p>
             </div>
 
-        </aside>
+            <div class="section-title">HP &amp; Recursos</div>
+            <div class="hp-ac-grid">
+                <div class="hp-item">
+                    <div class="stat-label">Puntos de Vida</div>
+                    <div id="char-hp">--/--</div>
+                </div>
+                <div class="ac-item">
+                    <div class="stat-label">Clase de Armadura</div>
+                    <div id="char-ac">--</div>
+                </div>
+            </div>
 
-    </div>
+            <div class="weight-row">
+                <div style="flex:1;">
+                    <div class="weight-label">⚖ Carga</div>
+                    <div class="weight-bar-wrap">
+                        <div class="weight-bar-fill" id="weight-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div id="char-weight" style="margin-left:14px;">-- / -- lb</div>
+            </div>
+
+            <div class="section-title">Atributos</div>
+            <div id="stats" class="stat-grid"></div>
+        </div>
+
+        <!-- TAB: INVENTORY -->
+        <div id="tab-inventory" class="tab" style="display:none;">
+            <div class="section-title">Inventario</div>
+            <ul id="inventory-list" class="feature-list"></ul>
+        </div>
+
+        <!-- TAB: GEAR -->
+        <div id="tab-gear" class="tab" style="display:none;">
+            <div class="section-title">Equipo Equipado</div>
+            <ul id="gear-list" class="feature-list"></ul>
+        </div>
+
+        <!-- TAB: FEATURES -->
+        <div id="tab-features" class="tab" style="display:none;">
+            <div class="section-title">Dones &amp; Habilidades</div>
+            <ul id="features-list" class="feature-list"></ul>
+        </div>
+    </aside>
+
+    <!-- ══════════════════════════════════════
+         DM PANEL
+    ══════════════════════════════════════ -->
+    <aside class="dm-panel panel-collapsed" id="dm-panel" style="display:none;">
+        <div class="tab-buttons">
+            <button onclick="openDMTab('map')" class="tab-btn active" id="dm-tab-btn-map">Mapa</button>
+            <button onclick="openDMTab('entities')" class="tab-btn" id="dm-tab-btn-entities">Entidades</button>
+            <button onclick="openDMTab('combat')" class="tab-btn" id="dm-tab-btn-combat">Combate</button>
+            <button onclick="openDMTab('items')" class="tab-btn" id="dm-tab-btn-items">Items</button>
+        </div>
+
+        <div id="dm-tab-map" class="tab">
+            <div class="section-title">Mapa</div>
+            <p style="font-family:'IM Fell English',serif;font-style:italic;opacity:.4;font-size:.95rem;">
+                Sin herramientas disponibles.</p>
+        </div>
+
+        <div id="dm-tab-entities" class="tab" style="display:none;">
+            <div class="section-title">Jugadores</div>
+            <ul id="dm-player-list" class="feature-list"></ul>
+
+            <div class="section-title">Enemigos</div>
+            <ul id="dm-enemy-list" class="feature-list"></ul>
+
+            <div class="section-title">Crear Enemigo</div>
+            <div class="dm-form">
+                <input type="text" id="enemy-name" placeholder="Nombre del enemigo...">
+                <input type="number" id="enemy-hp" placeholder="HP">
+                <input type="number" id="enemy-max-hp" placeholder="HP Máximo">
+                <input type="number" id="enemy-ac" placeholder="Clase de Armadura">
+                <select id="enemy-size">
+                    <option value="1x1">Tamaño 1×1</option>
+                    <option value="1x2">Tamaño 1×2</option>
+                    <option value="2x2">Tamaño 2×2</option>
+                    <option value="3x3">Tamaño 3×3</option>
+                </select>
+                <div class="enemy-attributes">
+                    <label>FUE</label><input type="number" id="enemy-str" value="10">
+                    <label>DES</label><input type="number" id="enemy-dex" value="10">
+                    <label>CON</label><input type="number" id="enemy-con" value="10">
+                    <label>INT</label><input type="number" id="enemy-int" value="10">
+                    <label>SAB</label><input type="number" id="enemy-wis" value="10">
+                    <label>CAR</label><input type="number" id="enemy-cha" value="10">
+                </div>
+                <div class="enemy-attacks">
+                    <h4>⚔ Ataques</h4>
+                    <div id="attacks-container"></div>
+                    <button type="button" onclick="addAttack()"
+                        style="background:rgba(107,63,160,0.1);border:1px dashed rgba(107,63,160,0.3);border-radius:5px;padding:8px 12px;color:#d8b4fe;font-family:'Cinzel',serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;width:100%;transition:all .18s ease;">+
+                        Añadir Ataque</button>
+                </div>
+                <input type="file" id="enemy-asset" accept="image/*">
+                <button onclick="createEnemy()">⚔ Invocar al Campo de Batalla</button>
+            </div>
+        </div>
+
+        <div id="dm-tab-combat" class="tab" style="display:none;">
+            <div class="section-title">Seleccionar Combatientes</div>
+            <p
+                style="font-family:'IM Fell English',serif;font-style:italic;opacity:.5;font-size:.9rem;margin-bottom:16px;">
+                Selecciona al menos 2 entidades para iniciar el combate.</p>
+            <div id="combat-selection-container"></div>
+            <button onclick="startCombat()" style="margin-top:18px;width:100%;padding:13px;
+                       background:linear-gradient(135deg,rgba(80,10,10,.9),rgba(139,26,26,.9));
+                       border:1px solid rgba(239,68,68,.35);color:#fca5a5;border-radius:8px;
+                       cursor:pointer;font-family:'Cinzel',serif;font-size:.85rem;
+                       letter-spacing:1.5px;text-transform:uppercase;transition:all .22s ease;
+                       box-shadow:0 4px 14px rgba(0,0,0,.5);">
+                ⚔️ Iniciar Combate
+            </button>
+        </div>
+
+        <div id="dm-tab-items" class="tab" style="display:none;">
+            <div class="section-title">Gestión de Items</div>
+            <input type="text" id="item-search" placeholder="Buscar en el almén...">
+            <div id="dm-item-list" class="feature-list" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+        </div>
+    </aside>
+
+    <!-- ══════════════════════════════════════
+         COMBAT PANEL
+    ══════════════════════════════════════ -->
+    <aside class="combat-panel panel-collapsed" id="combat-panel" style="display:none;">
+        <div class="combat-status-bar">
+            <div class="status-item">
+                <div class="status-label">Iniciativa</div>
+                <div class="status-value initiative" id="combat-initiative">+3</div>
+            </div>
+            <div class="status-divider"></div>
+            <div class="status-item">
+                <div class="status-label">Concentración</div>
+                <div class="status-value concentration" id="combat-concentration">Llamas Féericas</div>
+            </div>
+            <div class="status-divider"></div>
+            <div class="status-item">
+                <div class="status-label">CD Salvación</div>
+                <div class="status-value" style="color:#a78bfa;" id="combat-save-dc">14</div>
+            </div>
+        </div>
+
+        <div class="conditions-row">
+            <span class="conditions-label">Condiciones</span>
+            <span class="condition-tag blinded" id="cond-1">Cegado</span>
+            <span class="condition-tag poisoned" id="cond-2">Envenenado</span>
+        </div>
+
+        <div class="tab-buttons">
+            <button class="tab-btn active" onclick="openCombatTab('actions')">Acciones</button>
+            <button class="tab-btn" onclick="openCombatTab('spells')">Conjuros</button>
+            <button class="tab-btn" onclick="openCombatTab('abilities')">Dones</button>
+        </div>
+
+        <div id="tab-actions" class="tab active">
+            <div class="section-title">Ataques</div>
+            <div class="attack-card">
+                <div class="attack-name">
+                    Espada Larga
+                    <span class="attack-type-tag">Cuerpo a Cuerpo</span>
+                </div>
+                <div class="attack-stats">
+                    <div class="attack-stat">
+                        <div class="attack-stat-label">Bon. Ataque</div>
+                        <div class="attack-stat-val bonus" id="atk1-bonus">+6</div>
+                    </div>
+                    <div class="attack-stat">
+                        <div class="attack-stat-label">Daño</div>
+                        <div class="attack-stat-val damage" id="atk1-damage">1d8+4</div>
+                    </div>
+                    <div class="attack-stat">
+                        <div class="attack-stat-label">Alcance</div>
+                        <div class="attack-stat-val range" id="atk1-range">1,5m</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="tab-spells" class="tab" style="display:none;">
+            <div class="section-title">Conjuros</div>
+            <p style="font-family:'IM Fell English',serif;font-style:italic;opacity:.4;">Sin conjuros preparados.</p>
+        </div>
+        <div id="tab-abilities" class="tab" style="display:none;">
+            <div class="section-title">Habilidades</div>
+            <p style="font-family:'IM Fell English',serif;font-style:italic;opacity:.4;">Sin habilidades disponibles.
+            </p>
+        </div>
+    </aside>
 
     <script>
         const campaignCode = "{{ code }}";
+
+        /* ──────────────────────────────────────
+           PANEL TOGGLE LOGIC
+           Each panel slides in from the right.
+           The toggle button moves WITH the panel edge.
+        ─────────────────────────────────────── */
+        function togglePanel(panelId, toggleId) {
+            const panel = document.getElementById(panelId);
+            const toggle = document.getElementById(toggleId);
+            if (!panel || !toggle) return;
+
+            const isCollapsed = panel.classList.contains('panel-collapsed');
+
+            if (isCollapsed) {
+                // OPEN: slide panel in, move toggle to panel's left edge
+                panel.classList.remove('panel-collapsed');
+                toggle.classList.add('panel-open');
+            } else {
+                // CLOSE: slide panel out, move toggle back to screen edge
+                panel.classList.add('panel-collapsed');
+                toggle.classList.remove('panel-open');
+            }
+        }
+
+        /* Called by game.js after role is determined */
+        function showPanel(panelId, toggleId) {
+            const panel = document.getElementById(panelId);
+            const toggle = document.getElementById(toggleId);
+            if (!panel || !toggle) return;
+
+            // Make visible but start collapsed
+            panel.style.display = 'block';
+            toggle.style.display = 'flex';
+
+            // Collapsed state = panel off-screen, toggle at right edge
+            panel.classList.add('panel-collapsed');
+            toggle.classList.remove('panel-open');
+        }
     </script>
     <script src="{{ url_for('static', filename='js/game.js') }}" defer></script>
 </body>

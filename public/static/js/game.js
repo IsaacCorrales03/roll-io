@@ -4,6 +4,7 @@ let MAP_HEIGHT;
 let TILE_SIZE;
 let current_section_offset_x;
 let current_section_offset_y;
+let mapImage;
 
 let isDM;
 let myCharacterId;
@@ -11,6 +12,7 @@ let dm_player_list = [];
 let dm_enemies_list = [];
 let selectedCombatants = new Set();
 let selectedToken = null;
+
 /* ================================
    SOCKET.IO - CONEXIÓN
 ================================ */
@@ -20,22 +22,20 @@ window.onload = () => {
     socket.on('connect', () => {
         console.log('✅ Socket conectado');
         socket.emit('join_campaign', { code: campaignCode });
-
         socket.emit("load_game_resources", { code: campaignCode });
-
     });
 
     socket.on('player_joined', d => {
         console.log('👋 Jugador se unió:', d);
-        // TODO: Actualizar lista de jugadores/tokens
     });
+
     socket.on('items_result', data => {
         const items = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : [];
         const container = document.getElementById('dm-item-list');
         container.innerHTML = '';
 
         if (items.length === 0) {
-            container.innerHTML = '<div style="color:#888;">Sin items disponibles</div>';
+            container.innerHTML = '<div style="color:#888;font-family:\'IM Fell English\',serif;font-style:italic;">Sin items disponibles</div>';
             return;
         }
 
@@ -46,24 +46,24 @@ window.onload = () => {
             li.dataset.itemId = item.item_id || item.instance_id;
 
             li.innerHTML = `
-            <div class="item-header">
-                <div class="feature-name">${item.meta.name}</div>
-                <div class="item-type-badge type-${type}">${item.meta.item_type}</div>
-            </div>
-            <div class="feature-desc">${item.meta.description}</div>
-            <div class="item-meta">
-                ${item.meta.weight ? `<span>Peso: <strong>${item.meta.weight} lb</strong></span>` : ''}
-                ${item.equipped ? `<span class="equipped-badge">Equipado</span>` : ''}
-            </div>
-            <div class="item-actions">
-                <button onclick="giveItemToPlayer('${item.item_id || item.instance_id}', '${item.meta.name}')" ...> Dar Item</button>
-            </div>
-        `;
-
+                <div class="item-header">
+                    <div class="feature-name">${item.meta.name}</div>
+                    <div class="item-type-badge type-${type}">${item.meta.item_type}</div>
+                </div>
+                <div class="feature-desc">${item.meta.description}</div>
+                <div class="item-meta">
+                    ${item.meta.weight ? `<span>Peso: <strong>${item.meta.weight} lb</strong></span>` : ''}
+                    ${item.equipped ? `<span class="equipped-badge">Equipado</span>` : ''}
+                </div>
+                <div class="item-actions">
+                    <button class="item-btn btn-use" onclick="giveItemToPlayer('${item.item_id || item.instance_id}', '${item.meta.name}')">
+                        Dar Item
+                    </button>
+                </div>
+            `;
             container.appendChild(li);
         });
     });
-
 
     socket.on('game_resources_loaded', d => {
         isDM = d.is_dm;
@@ -74,41 +74,44 @@ window.onload = () => {
         current_section_offset_x = d.current_section.offset_x;
         current_section_offset_y = d.current_section.offset_y;
 
-        // Mostrar panel correcto
+        document.body.classList.toggle("dm-mode", isDM);
+
+        // ── CORREGIDO: usar showPanel() para mostrar los paneles correctamente
         if (isDM) {
-            document.getElementById('dm-panel').style.display = 'block';
+            showPanel('dm-panel', 'toggle-dm-panel');
         } else {
-            document.getElementById('player-panel').style.display = 'block';
+            showPanel('player-panel', 'toggle-player-panel');
+            // El panel de combate es opcional para jugadores; mostrarlo siempre
+
         }
 
-        // Rellenar map-info con datos del socket
+        const mapInfoEl = document.getElementById('map-info');
+        if (mapInfoEl) mapInfoEl.style.display = 'block';
+
         document.getElementById('map-scene-name').textContent = d.current_scene.name;
         document.getElementById('map-grid-info').textContent =
             `Grid: ${TILE_SIZE}px · ${MAP_WIDTH / TILE_SIZE}×${MAP_HEIGHT / TILE_SIZE} tiles`;
-        document.getElementById('map-info').style.display = 'block';
 
         mapImage = new Image();
-        mapImage.onload = () => { initializeGame(); };
+        mapImage.onload = initializeGame;
         mapImage.src = `/storage${d.current_scene.map_url}`.replace("uploads/", "");
     });
 
-
     socket.on('player_left', d => {
         console.log('👋 Jugador salió:', d);
-        // TODO: Actualizar lista de jugadores/tokens
     });
-    socket.on('item_equipped_toggled', d => {
-        socket.emit("get_character_data", { character_id: myCharacterId, campaign_code: campaignCode })
 
+    socket.on('item_equipped_toggled', d => {
+        socket.emit("get_character_data", { character_id: myCharacterId, campaign_code: campaignCode });
     });
+
     socket.on('chat_message', data => {
         const el = document.createElement('div');
         el.className = 'chat-message';
-        el.innerHTML = `<strong>${escapeHtml(data.sender)}:</strong> ${escapeHtml(data.text)}`;
+        el.innerHTML = `<strong>${escapeHtml(data.sender)}</strong>${escapeHtml(data.text)}`;
         chatMessages.appendChild(el);
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
-        // Si el chat está cerrado, incrementar contador
         if (!chatOpen) {
             unreadMessages++;
             const badge = document.getElementById('chat-badge');
@@ -121,11 +124,9 @@ window.onload = () => {
         const token = document.querySelector(`[data-token-id="${d.token_id}"]`);
         if (!token) return;
 
-        // Actualizar posición visual
         token.style.left = `${d.x * TILE_SIZE + TILE_SIZE / 2}px`;
         token.style.top = `${d.y * TILE_SIZE + TILE_SIZE / 2}px`;
 
-        // Actualizar grid state
         const oldX = parseInt(token.dataset.gridX || 0);
         const oldY = parseInt(token.dataset.gridY || 0);
 
@@ -133,106 +134,71 @@ window.onload = () => {
             updateGridState(d.token_id, oldX, oldY, d.x, d.y);
         }
 
-        // Actualizar dataset
         token.dataset.gridX = d.x;
         token.dataset.gridY = d.y;
     });
 
-    socket.on('error', d => {
-        console.error('❌ Error del servidor:', d);
-    });
+    socket.on('error', d => console.error('❌ Error del servidor:', d));
 
     socket.on('entities_result', data => {
-        console.log("Entities data:", data);
         dm_player_list = data.players || [];
         dm_enemies_list = data.enemies || [];
-
         renderDMEntities(data);
     });
 
-    socket.on("ac_result", (data) => {
-        document.getElementById('char-ac').textContent = data.value || '--';
-
+    socket.on("ac_result", data => {
+        const el = document.getElementById('char-ac');
+        if (el) el.textContent = data.value || '--';
     });
-    socket.on("enemy_created", (data) => {
+
+    socket.on("enemy_created", data => {
         if (document.querySelector(`[data-token-id="${data.id}"]`)) return;
         const token = createTokenElement(data);
         document.getElementById("tokens-container").appendChild(token);
         updateGridState(data.id, null, null, data.x, data.y);
     });
 
-
-    socket.on("tokens_sync", (tokens) => {
+    socket.on("tokens_sync", tokens => {
         document.querySelectorAll(".token").forEach(t => t.remove());
         initializeGrid();
-
         tokens.forEach(data => {
-            const token = createTokenElement(data);   // mismo formato
+            const token = createTokenElement(data);
             document.getElementById("tokens-container").appendChild(token);
             updateGridState(data.id, null, null, data.x, data.y);
         });
     });
-    socket.on("inventory_updated", d => {
-        renderCharacterGearAndInventory(d)
-    }
-    )
+
+    socket.on("inventory_updated", d => renderCharacterGearAndInventory(d));
+    socket.on("ac_result", (data) => {
+        document.getElementById('char-ac').textContent = data.value || '--';
+
+    });
     socket.on("character_data_received", c => {
-        // Nombre en dorado
         const nameEl = document.getElementById('char-name');
-        nameEl.textContent = c.name;
-        nameEl.style.cssText = `
-        font-family: 'Cinzel', serif;
-        font-size: 3rem;
-        font-weight: 700;
-        color: #d4a853;
-        text-shadow: 0 0 20px rgba(212,168,83,0.35);
-        letter-spacing: 0.03em;
-        margin-bottom: 4px;
-    `;
+        if (nameEl) nameEl.textContent = c.name;
+        console.log(c)
+        const metaEl = document.getElementById('char-meta');
+        if (metaEl) metaEl.textContent = `${c.race.name} · ${c.class.name} · Nivel ${c.level}`;
 
-        // Raza · Clase · Nivel
-        document.getElementById('char-meta').innerHTML = `
-        <div style="
-            font-size: 1.2rem;
-            color: #94a3b8;
-            letter-spacing: 0.05em;
-            margin-top: 4px;
-            margin-bottom: 20px;
-        ">
-            <span style="color:#475569; font-weight:600">${c.race.name}</span>
-            <span style="color:#475569; margin: 0 6px; font-weight:600; font-size:1rem">·</span>
-            <span style="color:#475569; font-weight:600">${c.class.name}</span>
-            <span style="color:#475569; margin: 0 6px; font-weight:600; font-size:1rem">·</span>
-            <span style="color:#475569; font-weight:600">Nivel ${c.level}</span>
-        </div>
-    `;
+        const hpEl = document.getElementById('char-hp');
+        if (hpEl) hpEl.textContent = `${c.hp.current} / ${c.hp.max}`;
 
-        // HP
-        document.getElementById('char-hp').textContent = `${c.hp.current} / ${c.hp.max}`;
-
-        // Peso
         const currentWeight = c.current_weight ?? 0;
         const maxWeight = c.max_weight ?? 0;
-        document.getElementById('char-weight').textContent = `${currentWeight} / ${maxWeight} lb`;
+        const weightEl = document.getElementById('char-weight');
+        if (weightEl) weightEl.textContent = `${currentWeight} / ${maxWeight} lb`;
 
         const pct = maxWeight > 0 ? Math.min((currentWeight / maxWeight) * 100, 100) : 0;
         const bar = document.getElementById('weight-bar');
-        bar.style.width = `${pct}%`;
-        if (pct >= 90) {
-            bar.style.background = 'linear-gradient(90deg, #7f1d1d, #ef4444)';
-            bar.style.boxShadow = '0 0 6px rgba(239,68,68,0.5)';
-        } else if (pct >= 60) {
-            bar.style.background = 'linear-gradient(90deg, #78350f, #f59e0b)';
-            bar.style.boxShadow = '0 0 6px rgba(245,158,11,0.5)';
-        } else {
-            bar.style.background = 'linear-gradient(90deg, #8a6830, #d4a853)';
-            bar.style.boxShadow = '0 0 6px rgba(212,168,83,0.5)';
+        if (bar) {
+            bar.style.width = `${pct}%`;
+            bar.style.background = pct >= 90
+                ? 'linear-gradient(90deg,#dc2626,#ef4444)'
+                : pct >= 60
+                    ? 'linear-gradient(90deg,#d97706,#f59e0b)'
+                    : 'linear-gradient(90deg,#8a6830,#d4a853)';
         }
-
-        // AC (via socket)
         socket.emit("get_ac", { actor_id: myCharacterId });
-
-        // Atributos
         const STAT_MAP = { STR: 'STR', DEX: 'DEX', CON: 'CON', INT: 'INT', WIS: 'WIS', CHA: 'CHA' };
         const statsDiv = document.getElementById('stats');
         statsDiv.innerHTML = ''; // limpiar antes
@@ -249,124 +215,150 @@ window.onload = () => {
         `;
             statsDiv.appendChild(el);
         });
-
-        // Habilidades
         const featuresList = document.getElementById('features-list');
         featuresList.innerHTML = '';
         c.features.forEach(f => {
             const li = document.createElement('li');
             li.className = 'feature-item';
             li.innerHTML = `
-            <div class="feature-name">${f.name}</div>
-            <div class="feature-name">${f.type}</div>
-            <div class="feature-desc">${f.description}</div>
-        `;
+        <div class="feature-name">${f.name} <span style="font-family:'IM Fell English',serif;font-style:italic;font-size:12px;color:#a78bfa;font-weight:normal;">${f.type}</span></div>
+        <div class="feature-desc">${f.description}</div>
+    `;
+            featuresList.appendChild(li);
+        });
+
+        // Separador + Proficiencias
+        const profSection = document.createElement('li');
+        profSection.style.cssText = 'list-style:none;margin-top:22px;padding-top:0;border:none;background:none;';
+        profSection.innerHTML = `<div class="section-title">Competencias</div>`;
+        featuresList.appendChild(profSection);
+
+        const profGroups = [
+            { label: 'Salvaciones', items: c.saving_throw_proficiencies },
+            { label: 'Armaduras', items: c.armor_proficiencies },
+            { label: 'Armas', items: c.weapon_proficiencies },
+            { label: 'Habilidades',  items: c.skill_proficiencies ?? []    }
+        ];
+        profGroups.forEach(group => {
+            if (!group.items?.length) return;
+            const li = document.createElement('li');
+            li.className = 'feature-item';
+
+            // Skill proficiencies tienen objeto completo con descripción
+            const isSkills = group.label === 'Habilidades' && typeof group.items[0] === 'object';
+
+            li.innerHTML = `
+        <div class="feature-name" style="font-size:12px;letter-spacing:1.5px;">${group.label}</div>
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;">
+            ${isSkills
+                    ? group.items.map(s => `
+                    <div style="padding:8px 10px;background:rgba(212,168,83,0.04);
+                                border:1px solid rgba(212,168,83,0.12);border-radius:6px;
+                                border-left:2px solid rgba(167,139,250,0.5);">
+                        <div style="font-family:'Cinzel',serif;font-size:11px;font-weight:700;
+                                    letter-spacing:1px;text-transform:uppercase;color:var(--rune-bright);
+                                    margin-bottom:3px;">${s.name}</div>
+                        <div style="font-family:'IM Fell English',serif;font-style:italic;
+                                    font-size:13px;color:var(--text-muted);line-height:1.5;">
+                            ${s.description}
+                        </div>
+                    </div>`
+                    ).join('')
+                    : `<div style="display:flex;flex-wrap:wrap;gap:5px;">
+                    ${group.items.map(i =>
+                        `<span style="font-family:'Cinzel',serif;font-size:10px;font-weight:700;
+                                      letter-spacing:0.8px;text-transform:uppercase;padding:3px 9px;
+                                      background:rgba(212,168,83,0.07);border:1px solid rgba(212,168,83,0.2);
+                                      border-radius:4px;color:var(--text-muted);">
+                            ${i.replace(/_/g, ' ')}
+                        </span>`
+                    ).join('')}
+                   </div>`
+                }
+        </div>
+    `;
             featuresList.appendChild(li);
         });
 
         // Equipo
-        renderCharacterGearAndInventory(c)
+        renderCharacterGearAndInventory(c);
     });
-
-
-    // Inicializar el resto de la UI
+    socket.on("combat_started", d => {
+        showPanel('combat-panel', 'toggle-combat-panel');
+    })
 };
-document.getElementById('item-search').addEventListener('input', e => {
-    const filter = e.target.value.toLowerCase();
-    document.querySelectorAll('#dm-item-list .item-card').forEach(card => {
-        const name = card.querySelector('.feature-name').textContent.toLowerCase();
-        const type = card.querySelector('.item-type-badge')?.textContent.toLowerCase() || '';
-        card.style.display = name.includes(filter) || type.includes(filter) ? 'block' : 'none';
-    });
-});
-function renderCharacterGearAndInventory(character) {
-    // --- Render Gear ---
-    const gearList = document.getElementById('gear-list');
-    gearList.innerHTML = `
-        <li class="feature-item">
-            <div class="feature-name">Arma Principal</div>
-            <div class="feature-desc">
-                ${character.weapon?.name
-            ? `<strong>${character.weapon.name}</strong>
-                       <br>${character.weapon.dice_count}${character.weapon.dice_size}${character.weapon.bonus ? ` +${character.weapon.bonus}` : ''} ${character.weapon.damage_type}
-                       ${character.weapon.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
-            : "Sin arma"}
-            </div>
-        </li>
-        <li class="feature-item">
-            <div class="feature-name">Armadura</div>
-            <div class="feature-desc">
-                ${character.armor?.name
-            ? `<strong>${character.armor.name}</strong>
-                       <br>AC: ${character.armor.base_ac} ${character.armor.dex_bonus ? `(DEX aplica)` : ''}
-                       ${character.armor.stealth_disadvantage ? '<span class="stealth-badge">Desventaja Sigilo</span>' : ''}
-                       ${character.armor.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
-            : "Sin armadura"}
-            </div>
-        </li>
-        <li class="feature-item">
-            <div class="feature-name">Escudo</div>
-            <div class="feature-desc">
-                ${character.shield?.name
-            ? `<strong>${character.shield.name}</strong>
-                       <br>AC Bonus: ${character.shield.ac_bonus}
-                       ${character.shield.equipped ? '<span class="equipped-badge">Equipado</span>' : ''}`
-            : "Sin escudo"}
-            </div>
-        </li>
-    `;
 
-    // --- Render Inventory ---
-    const inventoryList = document.getElementById('inventory-list');
-    inventoryList.innerHTML = '';
-    if (character.inventory && character.inventory.length > 0) {
-        character.inventory.forEach(item => {
-            const type = item.meta.item_type?.toLowerCase();
-            const isEquippable = ['weapon', 'armor', 'shield'].includes(type);
-            const isConsumable = type === 'consumable';
-
-            const li = document.createElement('li');
-            li.className = 'feature-item item-card';
-            li.dataset.itemId = item.item_id || item.id;
-            li.innerHTML = `
-                <div class="item-header">
-                    <div class="feature-name">${item.meta.name}</div>
-                    <div class="item-type-badge type-${type}">${item.meta.item_type}</div>
-                </div>
-                <div class="feature-desc">${item.meta.description}</div>
-                <div class="item-meta">
-                    <span>Cantidad: <strong>${item.quantity}</strong></span>
-                    ${item.meta.weight ? `<span>Peso: <strong>${item.meta.weight} lb</strong></span>` : ''}
-                    ${item.equipped ? `<span class="equipped-badge">Equipado</span>` : ''}
-                </div>
-                <div class="item-actions">
-                    ${isConsumable ? `
-                        <button class="item-btn btn-use"
-                            onclick="handleItemAction('use', '${item.item_id}')">
-                            ✨ Usar
-                        </button>
-                    ` : ''}
-                    ${isEquippable ? `
-                        <button class="item-btn ${item.equipped ? 'btn-unequip' : 'btn-equip'}"
-                            onclick="handleItemAction('equip', '${item.item_id}')">
-                            ${item.equipped ? ' Desequipar' : ' Equipar'}
-                        </button>
-                    ` : ''}
-                    <button class="item-btn btn-drop"
-                        onclick="handleItemAction('drop', '${item.item_id}')">
-                         Tirar
-                    </button>
-                </div>
-            `;
-            inventoryList.appendChild(li);
+/* ── Item search ── */
+document.addEventListener('DOMContentLoaded', () => {
+    const itemSearch = document.getElementById('item-search');
+    if (itemSearch) {
+        itemSearch.addEventListener('input', e => {
+            const filter = e.target.value.toLowerCase();
+            document.querySelectorAll('#dm-item-list .item-card').forEach(card => {
+                const name = card.querySelector('.feature-name')?.textContent.toLowerCase() || '';
+                const type = card.querySelector('.item-type-badge')?.textContent.toLowerCase() || '';
+                card.style.display = name.includes(filter) || type.includes(filter) ? 'block' : 'none';
+            });
         });
-    } else {
-        inventoryList.innerHTML = '<li class="feature-item">Sin objetos en el inventario.</li>';
     }
+});
+
+/* ================================
+   RENDER CHARACTER GEAR & INVENTORY
+================================ */
+function renderCharacterGearAndInventory(character) {
+    const gearList = document.getElementById('gear-list');
+    if (gearList) {
+        gearList.innerHTML = `
+            <li class="feature-item">
+                <div class="feature-name">Arma Principal</div>
+                <div class="feature-desc">${character.weapon?.name || "Sin arma equipada"}</div>
+            </li>
+        `;
+    }
+
+    const inventoryList = document.getElementById('inventory-list');
+    if (!inventoryList) return;
+    inventoryList.innerHTML = '';
+
+    if (!character.inventory?.length) {
+        inventoryList.innerHTML = '<li class="feature-item"><div class="feature-desc">Sin objetos en el inventario.</div></li>';
+        return;
+    }
+
+    character.inventory.forEach(item => {
+        const type = item.meta.item_type?.toLowerCase() || '';
+        const li = document.createElement('li');
+        li.className = 'feature-item item-card';
+        li.innerHTML = `
+            <div class="item-header">
+                <div class="feature-name">${item.meta.name}</div>
+                <div class="item-type-badge type-${type}">${item.meta.item_type}</div>
+            </div>
+            <div class="feature-desc">${item.meta.description}</div>
+            <div class="item-meta">
+                <span>Cantidad: <strong>${item.quantity}</strong></span>
+                ${item.meta.weight ? `<span>Peso: <strong>${item.meta.weight} lb</strong></span>` : ''}
+            </div>
+            <div class="item-actions">
+                ${item.equippable
+                ? item.equipped
+                    ? `<button class="item-btn btn-unequip" onclick="handleItemAction('equip','${item.instance_id}')">Desequipar</button>`
+                    : `<button class="item-btn btn-equip"   onclick="handleItemAction('equip','${item.instance_id}')">Equipar</button>`
+                : `<button class="item-btn btn-use" onclick="handleItemAction('use','${item.instance_id}')">Usar</button>`
+            }
+                <button class="item-btn btn-drop" onclick="handleItemAction('drop','${item.instance_id}')">Tirar</button>
+            </div>
+        `;
+        inventoryList.appendChild(li);
+    });
 }
+
+/* ================================
+   CREATE TOKEN ELEMENT
+================================ */
 function createTokenElement(data) {
     const token = document.createElement("div");
-
     token.className = "token enemy";
     token.dataset.tokenId = data.id;
     token.dataset.name = data.label ?? "";
@@ -382,16 +374,18 @@ function createTokenElement(data) {
     token.style.height = `${(data.height ?? 1) * TILE_SIZE}px`;
 
     if (data.asset) {
-        token.innerHTML = `<img src="${data.asset}" alt="${data.label}"
-            draggable="false" style="width:100%;height:100%;object-fit:contain;">`;
+        const img = document.createElement('img');
+        img.src = data.asset;
+        img.alt = data.label || '';
+        img.draggable = false;
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+        token.appendChild(img);
     }
-
     return token;
 }
 
-
 /* ================================
-   MAPA CON PAN/ZOOM
+   MAP PAN / ZOOM
 ================================ */
 const mapViewport = document.getElementById('map-viewport');
 const mapContainer = document.getElementById('map-container');
@@ -400,9 +394,6 @@ const mapCtx = mapCanvas.getContext('2d');
 const gridCanvas = document.getElementById('grid-canvas');
 const gridCtx = gridCanvas.getContext('2d');
 
-
-
-// Estado de pan/zoom
 let mapScale = 1;
 let mapPanX = 0;
 let mapPanY = 0;
@@ -411,14 +402,11 @@ let panStartX = 0;
 let panStartY = 0;
 let showGridOverlay = true;
 
-// Configurar tamaño de canvas
-
-
 let GRID_COLS;
 let GRID_ROWS;
 
 /* ================================
-   INICIALIZAR JUEGO
+   INITIALIZE GAME
 ================================ */
 function initializeGame() {
     mapCanvas.width = MAP_WIDTH;
@@ -427,12 +415,11 @@ function initializeGame() {
     gridCanvas.height = MAP_HEIGHT;
     GRID_COLS = Math.floor(MAP_WIDTH / TILE_SIZE);
     GRID_ROWS = Math.floor(MAP_HEIGHT / TILE_SIZE);
+
     renderMap();
     centerMap();
 
-    if (!isDM && myCharacterId) {
-        loadCharacter();
-    }
+    if (!isDM && myCharacterId) loadCharacter();
 
     if (isDM) {
         socket.emit("get_entities", { campaign_code: campaignCode });
@@ -444,32 +431,20 @@ function initializeGame() {
     hideLoader();
 }
 
-
 function renderMap() {
-    // Dibujar SOLO la sección recortada
     mapCtx.drawImage(
         mapImage,
-        current_section_offset_x,
-        current_section_offset_y,
-        MAP_WIDTH,
-        MAP_HEIGHT,
-        0,
-        0,
-        MAP_WIDTH,
-        MAP_HEIGHT
+        current_section_offset_x, current_section_offset_y,
+        MAP_WIDTH, MAP_HEIGHT,
+        0, 0, MAP_WIDTH, MAP_HEIGHT
     );
-
-    // Dibujar grid
-    if (showGridOverlay) {
-        drawGrid();
-    } else {
-        gridCtx.clearRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
-    }
+    if (showGridOverlay) drawGrid();
+    else gridCtx.clearRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
 }
 
 function drawGrid() {
     gridCtx.clearRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
-    gridCtx.strokeStyle = 'rgb(255, 255, 255)';
+    gridCtx.strokeStyle = 'rgba(255,255,255,0.3)';
     gridCtx.lineWidth = 1;
 
     for (let x = 0; x <= MAP_WIDTH; x += TILE_SIZE) {
@@ -478,7 +453,6 @@ function drawGrid() {
         gridCtx.lineTo(x, MAP_HEIGHT);
         gridCtx.stroke();
     }
-
     for (let y = 0; y <= MAP_HEIGHT; y += TILE_SIZE) {
         gridCtx.beginPath();
         gridCtx.moveTo(0, y);
@@ -492,24 +466,15 @@ function updateMapTransform() {
 }
 
 function centerMap() {
-    const viewportWidth = mapViewport.clientWidth;
-    const viewportHeight = mapViewport.clientHeight;
-
-    // Si el mapa es más pequeño que el viewport, centrarlo
-    if (MAP_WIDTH < viewportWidth) {
-        mapPanX = (viewportWidth - MAP_WIDTH) / 2;
-    }
-    if (MAP_HEIGHT < viewportHeight) {
-        mapPanY = (viewportHeight - MAP_HEIGHT) / 2;
-    }
-
+    const vw = mapViewport.clientWidth;
+    const vh = mapViewport.clientHeight;
+    if (MAP_WIDTH < vw) mapPanX = (vw - MAP_WIDTH) / 2;
+    if (MAP_HEIGHT < vh) mapPanY = (vh - MAP_HEIGHT) / 2;
     updateMapTransform();
 }
 
 function resetMapView() {
-    mapScale = 1;
-    mapPanX = 0;
-    mapPanY = 0;
+    mapScale = 1; mapPanX = 0; mapPanY = 0;
     centerMap();
 }
 
@@ -518,7 +483,7 @@ function toggleGrid() {
     renderMap();
 }
 
-// Pan del mapa
+/* Pan */
 mapViewport.addEventListener('mousedown', e => {
     if (e.target !== mapViewport && e.target !== mapCanvas && e.target !== gridCanvas) return;
     isPanning = true;
@@ -539,29 +504,24 @@ document.addEventListener('mouseup', () => {
     mapViewport.classList.remove('panning');
 });
 
-// Zoom con rueda del mouse
+/* Zoom */
 mapViewport.addEventListener('wheel', e => {
     e.preventDefault();
-
     const rect = mapViewport.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
-
-    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.max(0.5, Math.min(3, mapScale * zoomFactor));
-
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.max(0.3, Math.min(4, mapScale * factor));
     const worldX = (mouseX - mapPanX) / mapScale;
     const worldY = (mouseY - mapPanY) / mapScale;
-
     mapPanX = mouseX - worldX * newScale;
     mapPanY = mouseY - worldY * newScale;
     mapScale = newScale;
-
     updateMapTransform();
-});
+}, { passive: false });
 
 /* ================================
-   CHAT COLAPSABLE
+   CHAT
 ================================ */
 let chatOpen = false;
 let unreadMessages = 0;
@@ -572,8 +532,6 @@ function openChat() {
     document.getElementById('chat-collapsed').style.display = 'none';
     document.getElementById('chat-expanded').style.display = 'block';
     document.getElementById('chat-input').focus();
-
-    // Reset unread
     unreadMessages = 0;
     document.getElementById('chat-badge').style.display = 'none';
 }
@@ -584,170 +542,146 @@ function closeChat() {
     document.getElementById('chat-expanded').style.display = 'none';
 }
 
-// Atajo de teclado: T o Enter para abrir chat
 document.addEventListener('keydown', e => {
     if (chatOpen) {
-        if (e.key === 'Escape') {
-            closeChat();
-        }
+        if (e.key === 'Escape') closeChat();
     } else {
-        if (e.key === 't' || e.key === 'T' || e.key === 'Enter') {
-            // Solo si no estamos escribiendo en otro input
-            if (document.activeElement.tagName !== 'INPUT' &&
-                document.activeElement.tagName !== 'TEXTAREA') {
-                e.preventDefault();
-                openChat();
-            }
+        if ((e.key === 't' || e.key === 'T' || e.key === 'Enter') &&
+            document.activeElement.tagName !== 'INPUT' &&
+            document.activeElement.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            openChat();
         }
     }
 });
 
-// Cerrar chat al hacer click fuera
 document.addEventListener('click', e => {
     if (!chatOpen) return;
-
     const chatWidget = document.querySelector('.chat-widget');
-    const clickedInsideChat = chatWidget && chatWidget.contains(e.target);
-
-    if (!clickedInsideChat) {
-        closeChat();
-    }
+    if (chatWidget && !chatWidget.contains(e.target)) closeChat();
 });
 
-// Enviar mensaje
 document.getElementById('chat-form').onsubmit = e => {
     e.preventDefault();
     const input = document.getElementById('chat-input');
     if (!input.value.trim()) return;
-    socket.emit('chat_message', {
-        code: campaignCode,
-        text: input.value
-    });
+    socket.emit('chat_message', { code: campaignCode, text: input.value });
     input.value = '';
 };
 
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
 }
 
 /* ================================
    TABS
 ================================ */
 function openTab(name) {
-    document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
-    document.getElementById(`tab-${name}`).style.display = 'block';
+    document.querySelectorAll('#player-panel .tab').forEach(t => t.style.display = 'none');
+    const target = document.getElementById(`tab-${name}`);
+    if (target) target.style.display = 'block';
+    document.querySelectorAll('#player-panel .tab-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`tab-btn-${name}`);
+    if (btn) btn.classList.add('active');
+}
 
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tab-btn-${name}`).classList.add('active');
+function openCombatTab(name) {
+    document.querySelectorAll('#combat-panel .tab').forEach(t => t.style.display = 'none');
+    const target = document.getElementById(`tab-${name}`);
+    if (target) target.style.display = 'block';
+    document.querySelectorAll('#combat-panel .tab-btn').forEach(b => b.classList.remove('active'));
+    // find the clicked button
+    const btns = document.querySelectorAll('#combat-panel .tab-btn');
+    btns.forEach(b => { if (b.textContent.toLowerCase().includes(name.slice(0, 4))) b.classList.add('active'); });
+}
+
+function openDMTab(name) {
+    ['map', 'entities', 'combat', 'items'].forEach(n => {
+        const t = document.getElementById(`dm-tab-${n}`);
+        if (t) t.style.display = 'none';
+        const b = document.getElementById(`dm-tab-btn-${n}`);
+        if (b) b.classList.remove('active');
+    });
+    const tab = document.getElementById(`dm-tab-${name}`);
+    if (tab) tab.style.display = 'block';
+    const btn = document.getElementById(`dm-tab-btn-${name}`);
+    if (btn) btn.classList.add('active');
+
+    if (name === 'items') socket.emit('get_items');
 }
 
 /* ================================
-   CARGAR PERSONAJE
+   LOAD CHARACTER
 ================================ */
 function loadCharacter() {
-    // Pedir los datos del personaje
     socket.emit("get_character_data", {
         character_id: myCharacterId,
         campaign_code: campaignCode
     });
 }
 
-// Token Preview Functionality
+/* ================================
+   TOKEN PREVIEW
+================================ */
 const preview = document.getElementById('token-preview');
 
 document.addEventListener('mouseover', e => {
     const token = e.target.closest('.token');
+    if (!token) { preview.style.display = 'none'; return; }
 
-    if (!token) {
-        preview.style.display = 'none';
-        return;
-    }
-
-    // Obtener la posición del token en la pantalla
     const rect = token.getBoundingClientRect();
-
-    // Posicionar el preview
     preview.style.display = 'block';
     preview.style.left = (rect.left + rect.width / 2) + 'px';
-    preview.style.top = (rect.top - 10) + 'px';
-
-    // Rellenar contenido del preview
+    preview.style.top = (rect.top - 12) + 'px';
     preview.innerHTML = `
-        <div class="preview-name">${token.dataset.name}</div>
-        <div class="preview-info">Nivel ${token.dataset.level} ${token.dataset.class}</div>
+        <div class="preview-name">${token.dataset.name || '???'}</div>
+        <div class="preview-info">${token.dataset.level ? `Nivel ${token.dataset.level} ${token.dataset.class}` : 'Entidad'}</div>
         <div class="preview-stats">
-            <div><strong>❤️ ${token.dataset.hp}/${token.dataset.maxHp}</strong></div>
-            <div>🛡️ <span class="ac-value">${token.dataset.ac}</span></div>
+            <div><strong>❤ ${token.dataset.hp || 0}/${token.dataset.maxHp || 0}</strong></div>
+            <div>🛡 <span class="ac-value">${token.dataset.ac || 10}</span></div>
         </div>
     `;
 });
-function handleItemAction(action, itemId) {
-    if (action === 'use') {
-        socket.emit("save_and_exit", {
-            campaign_code: campaignCode,
-        });
 
-    }
-    else if (action === 'equip') {
-        socket.emit("toggle_equip_item", {
-            item_id: itemId,
-            character_id: myCharacterId,
-        });
-    }
-    else if (action === 'drop') {
-        socket.emit("save_and_exit", {
-            campaign_code: campaignCode,
-        });
-        console.log("Tirando objeto:", itemId);
-    }
-    else {
-        console.warn("Acción desconocida:", action);
-    }
-}
 document.addEventListener('mouseout', e => {
-    const token = e.target.closest('.token');
-
-    if (token) {
-        preview.style.display = 'none';
-    }
+    if (e.target.closest('.token')) preview.style.display = 'none';
 });
 
-// Ocultar preview cuando el mouse sale del área del mapa
 document.getElementById('map-viewport').addEventListener('mouseleave', () => {
     preview.style.display = 'none';
 });
 
 /* ================================
-   GRID LÓGICO DEL MAPA
+   ITEM ACTIONS
 ================================ */
+function handleItemAction(action, itemId) {
+    if (action === 'equip') {
+        socket.emit("toggle_equip_item", { item_id: itemId, character_id: myCharacterId });
+    } else if (action === 'use') {
+        console.log("Usando objeto:", itemId);
+    } else if (action === 'drop') {
+        console.log("Tirando objeto:", itemId);
+    }
+}
 
-
-
-// Grid lógico: null = vacío, objeto = token info
+/* ================================
+   GRID LOGIC
+================================ */
 let gridState = [];
 
 function initializeGrid() {
-    // Crear matriz vacía
     gridState = [];
     for (let y = 0; y < GRID_ROWS; y++) {
         gridState[y] = [];
-        for (let x = 0; x < GRID_COLS; x++) {
-            gridState[y][x] = null;
-        }
+        for (let x = 0; x < GRID_COLS; x++) gridState[y][x] = null;
     }
-
-    // Registrar posiciones iniciales de tokens
     document.querySelectorAll('.token').forEach(token => {
         const x = parseInt(token.dataset.gridX || 0);
         const y = parseInt(token.dataset.gridY || 0);
-
         if (isValidGridPosition(x, y)) {
-            gridState[y][x] = {
-                tokenId: token.dataset.tokenId,
-                name: token.dataset.name
-            };
+            gridState[y][x] = { tokenId: token.dataset.tokenId, name: token.dataset.name };
         }
     });
 }
@@ -762,25 +696,19 @@ function isCellOccupied(x, y) {
 }
 
 function updateGridState(tokenId, oldX, oldY, newX, newY) {
-    console.log(tokenId, oldX, oldY, newX, newY);
-    // Limpiar posición anterior
-    if (gridState[oldY] && gridState[oldY][oldX]) {
-        gridState[oldY][oldX] = null;
-    }
-    // Ocupar nueva posición
+    if (gridState[oldY] && gridState[oldY][oldX]) gridState[oldY][oldX] = null;
     if (isValidGridPosition(newX, newY)) {
         const token = document.querySelector(`[data-token-id="${tokenId}"]`);
-        gridState[newY][newX] = {
-            tokenId: tokenId,
-            name: token?.dataset.name || 'Unknown'
-        };
+        gridState[newY][newX] = { tokenId, name: token?.dataset.name || 'Unknown' };
     }
-
 }
+
+/* ================================
+   ATTACK BUILDER
+================================ */
 function parseDamageExpression(expr) {
     const match = expr.match(/^(\d+)d(\d+)([+-]\d+)?$/i);
     if (!match) return null;
-
     return {
         dice_count: parseInt(match[1]),
         dice_size: parseInt(match[2]),
@@ -790,26 +718,18 @@ function parseDamageExpression(expr) {
 
 function addAttack() {
     const container = document.getElementById("attacks-container");
-
-    const attackDiv = document.createElement("div");
-    attackDiv.classList.add("attack-item");
-
-    attackDiv.innerHTML = `
-        <hr>
-
-        <input type="text" class="attack-name" placeholder="Nombre del ataque" required>
-
-        <input type="number" class="attack-bonus" placeholder="Bonus al ataque" value="0">
-
-        <input type="text" class="attack-damage" placeholder="Daño (ej: 1d6+2)" required>
-
-        <label>Tipo de ataque:</label>
+    const div = document.createElement("div");
+    div.className = "attack-item";
+    div.innerHTML = `
+        <input type="text"   class="attack-name"        placeholder="Nombre del ataque">
+        <input type="number" class="attack-bonus"        placeholder="Bonus al ataque" value="0">
+        <input type="text"   class="attack-damage"       placeholder="Daño (ej: 1d6+2)">
+        <label>Tipo de ataque</label>
         <select class="attack-category">
             <option value="melee">Melee</option>
             <option value="ranged">Ranged</option>
         </select>
-
-        <label>Tipo de daño:</label>
+        <label>Tipo de daño</label>
         <select class="attack-damage-type">
             <option value="slashing">Slashing</option>
             <option value="piercing">Piercing</option>
@@ -820,66 +740,34 @@ function addAttack() {
             <option value="necrotic">Necrotic</option>
             <option value="radiant">Radiant</option>
         </select>
-
-        <button type="button" onclick="removeAttack(this)">
-            Eliminar
-        </button>
+        <button type="button" onclick="removeAttack(this)">Eliminar</button>
     `;
-
-    container.appendChild(attackDiv);
+    container.appendChild(div);
 }
 
-function removeAttack(button) {
-    button.parentElement.remove();
-}
+function removeAttack(button) { button.parentElement.remove(); }
 
 function collectAttacks() {
-    const attackElements = document.querySelectorAll(".attack-item");
     const attacks = [];
-
-    attackElements.forEach(el => {
-
-        const nameInput = el.querySelector(".attack-name");
-        const bonusInput = el.querySelector(".attack-bonus");
-        const damageInput = el.querySelector(".attack-damage");
-        const damageTypeSelect = el.querySelector(".attack-damage-type");
-
-        if (!nameInput || !bonusInput || !damageInput || !damageTypeSelect) {
-            console.error("Estructura de ataque incompleta");
-            return;
-        }
-
-        const name = nameInput.value.trim();
-        const bonus = parseInt(bonusInput.value) || 0;
-        const damageExpr = damageInput.value.trim();
-        const damageType = damageTypeSelect.value;
-
-        if (!name) return;
-
+    document.querySelectorAll(".attack-item").forEach(el => {
+        const name = el.querySelector(".attack-name")?.value.trim();
+        const bonus = parseInt(el.querySelector(".attack-bonus")?.value) || 0;
+        const damageExpr = el.querySelector(".attack-damage")?.value.trim();
+        const damageType = el.querySelector(".attack-damage-type")?.value;
+        if (!name || !damageExpr) return;
         const parsed = parseDamageExpression(damageExpr);
-        if (!parsed) {
-            console.error("Formato inválido:", damageExpr);
-            return;
-        }
-
-        attacks.push({
-            name: name,
-            attack_bonus: bonus,
-            dice_count: parsed.dice_count,
-            dice_size: parsed.dice_size,
-            damage_bonus: parsed.damage_bonus,
-            damage_type: damageType
-        });
+        if (!parsed) return;
+        attacks.push({ name, attack_bonus: bonus, ...parsed, damage_type: damageType });
     });
-
     return attacks;
 }
+
 async function createEnemy() {
     const name = document.getElementById('enemy-name').value.trim();
     const hp = parseInt(document.getElementById('enemy-hp').value);
     const maxHp = parseInt(document.getElementById('enemy-max-hp').value);
     const ac = parseInt(document.getElementById('enemy-ac').value) || 10;
-    const sizeValue = document.getElementById('enemy-size').value;
+    const sizeVal = document.getElementById('enemy-size').value;
     const fileInput = document.getElementById('enemy-asset');
 
     const attributes = {
@@ -892,112 +780,73 @@ async function createEnemy() {
     };
 
     const attacks = collectAttacks();
+    if (!name || isNaN(hp) || isNaN(maxHp) || !fileInput.files.length || attacks.length === 0) return;
 
-    // Validaciones estrictas
-    if (!name) return console.warn("Nombre requerido");
-    if (Number.isNaN(hp) || Number.isNaN(maxHp)) return console.warn("HP inválido");
-    if (!fileInput.files.length) return console.warn("Asset requerido");
-
-    for (const key in attributes) {
-        if (Number.isNaN(attributes[key])) {
-            return console.warn(`Atributo inválido: ${key}`);
-        }
-    }
-
-    if (attacks.length === 0) {
-        return console.warn("Debe tener al menos un ataque");
-    }
-
-    const sizeMap = sizeValue.split('x').map(Number);
-
-    const file = fileInput.files[0];
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", fileInput.files[0]);
 
     try {
-        const uploadRes = await fetch("/api/enemies/upload", {
-            method: "POST",
-            body: formData
-        });
-
-        if (!uploadRes.ok) {
-            console.error("Error HTTP en upload");
-            return;
-        }
-
+        const uploadRes = await fetch("/api/enemies/upload", { method: "POST", body: formData });
+        if (!uploadRes.ok) return;
         const uploadData = await uploadRes.json();
-
-        if (!uploadData.success) {
-            console.error("Upload falló");
-            return;
-        }
+        if (!uploadData.success) return;
 
         socket.emit("create_enemy", {
             campaign_code: campaignCode,
-            name,
-            hp,
-            max_hp: maxHp,
-            ac,
+            name, hp, max_hp: maxHp, ac,
             asset: uploadData.asset_url,
-            size: sizeMap,
-            attributes,
-            attacks
+            size: sizeVal.split('x').map(Number),
+            attributes, attacks
         });
 
-        // Limpieza
         document.getElementById('enemy-name').value = "";
         document.getElementById('enemy-hp').value = "";
         document.getElementById('enemy-max-hp').value = "";
         document.getElementById('enemy-asset').value = "";
         document.getElementById('attacks-container').innerHTML = "";
 
-    } catch (err) {
-        console.error("Error en upload:", err);
-    }
+    } catch (err) { console.error("Error en upload:", err); }
 }
 
 /* ================================
-   DM TOKEN MOVE SYSTEM (MEJORADO)
+   DM ENTITIES RENDER
 ================================ */
-
 function renderDMEntities(data) {
     const playerList = document.getElementById('dm-player-list');
     const enemyList = document.getElementById('dm-enemy-list');
-    dm_player_list = [];   // ← resetear antes de push
+    dm_player_list = [];
     dm_enemies_list = [];
-    // Render jugadores
+
     playerList.innerHTML = '';
-    data.characters.forEach(char => {
-        const hpPercent = Math.round((char.hp / char.max_hp) * 100);
-        const hpColor = hpPercent > 50 ? '#4caf50' : hpPercent > 25 ? '#ff9800' : '#f44336';
+    (data.characters || []).forEach(char => {
         dm_player_list.push(char);
+        const pct = Math.round((char.hp / char.max_hp) * 100);
+        const color = pct > 50 ? '#4ade80' : pct > 25 ? '#f59e0b' : '#f87171';
         const li = document.createElement('li');
         li.className = 'feature-item';
-        li.dataset.charId = char.id; // ← añadir
+        li.dataset.charId = char.id;
         li.innerHTML = `
             <div class="entity-header">
                 <span class="entity-name">${char.name}</span>
                 <span class="entity-ac">🛡️ ${char.ac}</span>
             </div>
             <div class="entity-hp-bar-bg">
-                <div class="entity-hp-bar" style="width:${hpPercent}%; background:${hpColor};"></div>
+                <div class="entity-hp-bar" style="width:${pct}%;background:${color};"></div>
             </div>
             <div class="entity-hp-text">${char.hp} / ${char.max_hp} HP</div>
         `;
         playerList.appendChild(li);
     });
 
-    if (data.characters.length === 0) {
-        playerList.innerHTML = '<li class="feature-item" style="color:#888;">Sin jugadores conectados</li>';
+    if (!data.characters?.length) {
+        playerList.innerHTML = '<li class="feature-item"><div class="feature-desc">Sin jugadores conectados.</div></li>';
     }
 
-    // Render enemigos
     enemyList.innerHTML = '';
-    data.enemies.forEach(enemy => {
+    (data.enemies || []).forEach(enemy => {
         dm_enemies_list.push(enemy);
-        const hpPercent = Math.round((enemy.hp / enemy.max_hp) * 100);
-        const hpColor = hpPercent > 50 ? '#4caf50' : hpPercent > 25 ? '#ff9800' : '#f44336';
-
+        const pct = Math.round((enemy.hp / enemy.max_hp) * 100);
+        const color = pct > 50 ? '#4ade80' : pct > 25 ? '#f59e0b' : '#f87171';
         const li = document.createElement('li');
         li.className = 'feature-item';
         li.dataset.charId = enemy.id;
@@ -1007,87 +856,77 @@ function renderDMEntities(data) {
                 <span class="entity-ac">🛡️ ${enemy.ac}</span>
             </div>
             <div class="entity-hp-bar-bg">
-                <div class="entity-hp-bar" style="width:${hpPercent}%; background:${hpColor};"></div>
+                <div class="entity-hp-bar" style="width:${pct}%;background:${color};"></div>
             </div>
             <div class="entity-hp-text">${enemy.hp} / ${enemy.max_hp} HP</div>
         `;
         enemyList.appendChild(li);
     });
 
-    if (data.enemies.length === 0) {
-        enemyList.innerHTML = '<li class="feature-item" style="color:#888;">Sin enemigos creados</li>';
+    if (!data.enemies?.length) {
+        enemyList.innerHTML = '<li class="feature-item"><div class="feature-desc">Sin enemigos creados.</div></li>';
     }
+
     renderCombatTab();
 }
-function renderCombatTab() {
 
+function renderCombatTab() {
     const container = document.getElementById("combat-selection-container");
+    if (!container) return;
     container.innerHTML = "";
 
-    const sectionPlayers = document.createElement("div");
-    sectionPlayers.innerHTML = "<h3>Jugadores</h3>";
+    if (dm_player_list.length) {
+        const sec = document.createElement("div");
+        sec.innerHTML = `<p style="font-family:'Cinzel',serif;font-size:11px;color:#9a8060;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Jugadores</p>`;
+        dm_player_list.forEach(p => sec.appendChild(createCombatItem(p, "player")));
+        container.appendChild(sec);
+    }
 
-    dm_player_list.forEach(player => {
-        sectionPlayers.appendChild(createCombatItem(player, "player"));
-    });
-
-    const sectionEnemies = document.createElement("div");
-    sectionEnemies.innerHTML = "<h3>Enemigos</h3>";
-
-    dm_enemies_list.forEach(enemy => {
-        sectionEnemies.appendChild(createCombatItem(enemy, "enemy"));
-    });
-
-    container.appendChild(sectionPlayers);
-    container.appendChild(sectionEnemies);
+    if (dm_enemies_list.length) {
+        const sec = document.createElement("div");
+        sec.style.marginTop = "14px";
+        sec.innerHTML = `<p style="font-family:'Cinzel',serif;font-size:11px;color:#9a8060;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Enemigos</p>`;
+        dm_enemies_list.forEach(e => sec.appendChild(createCombatItem(e, "enemy")));
+        container.appendChild(sec);
+    }
 }
-function createCombatItem(entity, type) {
 
+function createCombatItem(entity, type) {
     const div = document.createElement("div");
     div.className = "combat-item";
     div.dataset.id = entity.id;
     div.dataset.type = type;
-
     div.innerHTML = `
-        <img src="${entity.asset_url}" width="40">
-        <span>${entity.name}</span>
-        <span>HP: ${entity.hp}/${entity.max_hp}</span>
+        <img src="${entity.asset_url || ''}" onerror="this.style.display='none'" width="36" height="36">
+        <span style="flex:1;font-family:'Cinzel',serif;font-size:13px;">${entity.name}</span>
+        <span style="font-size:12px;color:#9a8060;font-family:'Cinzel',serif;">${entity.hp}/${entity.max_hp}</span>
     `;
-
     div.onclick = () => toggleCombatSelection(div, entity.id);
-
     return div;
 }
-function toggleCombatSelection(element, id) {
 
+function toggleCombatSelection(el, id) {
     if (selectedCombatants.has(id)) {
         selectedCombatants.delete(id);
-        element.classList.remove("selected");
+        el.classList.remove("selected");
     } else {
         selectedCombatants.add(id);
-        element.classList.add("selected");
+        el.classList.add("selected");
     }
 }
+
 function startCombat() {
-
-    if (selectedCombatants.size < 2) {
-        console.warn("Se requieren al menos 2 combatientes");
-        return;
-    }
-
-    socket.emit("start_combat", {
-        campaign_code: campaignCode,
-        combatants: Array.from(selectedCombatants)
-        
-    });
-
+    if (selectedCombatants.size < 2) { console.warn("Se requieren al menos 2 combatientes"); return; }
+    socket.emit("start_combat", { campaign_code: campaignCode, combatants: Array.from(selectedCombatants) });
     selectedCombatants.clear();
-    document.querySelectorAll(".selected")
-        .forEach(el => el.classList.remove("selected"));
+    document.querySelectorAll(".combat-item.selected").forEach(el => el.classList.remove("selected"));
 }
+
+/* ================================
+   DM TOKEN CONTROLS
+================================ */
 function setupDMControls() {
-    // Click en token → seleccionar
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', e => {
         const token = e.target.closest('.token');
         if (token) {
             e.stopPropagation();
@@ -1102,80 +941,41 @@ function setupDMControls() {
         }
     });
 
-    // Click en grid canvas → mover token
-    gridCanvas.addEventListener('click', (e) => {
+    function handleGridClick(e, canvas) {
         if (!selectedToken) return;
         e.stopPropagation();
-
-        const rect = gridCanvas.getBoundingClientRect();
+        const rect = canvas.getBoundingClientRect();
         const tileX = Math.floor((e.clientX - rect.left) / (TILE_SIZE * mapScale));
         const tileY = Math.floor((e.clientY - rect.top) / (TILE_SIZE * mapScale));
-
         if (!isValidGridPosition(tileX, tileY) || isCellOccupied(tileX, tileY)) return;
-
         const oldX = parseInt(selectedToken.dataset.gridX || 0);
         const oldY = parseInt(selectedToken.dataset.gridY || 0);
-
         updateGridState(selectedToken.dataset.tokenId, oldX, oldY, tileX, tileY);
         selectedToken.dataset.gridX = tileX;
         selectedToken.dataset.gridY = tileY;
-
-        socket.emit("move_token", {
-            campaign_code: campaignCode,
-            token_id: selectedToken.dataset.tokenId,
-            x: tileX,
-            y: tileY
-        });
-
+        socket.emit("move_token", { campaign_code: campaignCode, token_id: selectedToken.dataset.tokenId, x: tileX, y: tileY });
         selectedToken.classList.remove('selected');
         selectedToken = null;
-    });
+    }
 
-    // Igual para mapCanvas
-    mapCanvas.addEventListener('click', (e) => {
-        if (!selectedToken) return;
-        e.stopPropagation();
-
-        const rect = mapCanvas.getBoundingClientRect();
-        const tileX = Math.floor((e.clientX - rect.left) / (TILE_SIZE * mapScale));
-        const tileY = Math.floor((e.clientY - rect.top) / (TILE_SIZE * mapScale));
-
-        if (!isValidGridPosition(tileX, tileY) || isCellOccupied(tileX, tileY)) return;
-
-        const oldX = parseInt(selectedToken.dataset.gridX || 0);
-        const oldY = parseInt(selectedToken.dataset.gridY || 0);
-
-        updateGridState(selectedToken.dataset.tokenId, oldX, oldY, tileX, tileY);
-        selectedToken.dataset.gridX = tileX;
-        selectedToken.dataset.gridY = tileY;
-
-        socket.emit("move_token", {
-            campaign_code: campaignCode,
-            token_id: selectedToken.dataset.tokenId,
-            x: tileX,
-            y: tileY
-        });
-
-        selectedToken.classList.remove('selected');
-        selectedToken = null;
-    });
+    gridCanvas.addEventListener('click', e => handleGridClick(e, gridCanvas));
+    mapCanvas.addEventListener('click', e => handleGridClick(e, mapCanvas));
 }
-// ================================
-// LOADING SCREEN LOGIC
-// ================================
+
+/* ================================
+   LOADING SCREEN
+================================ */
 const DD_QUOTES = [
-    "\"Un d20 decide el destino de héroes y dioses por igual.\"",
-    "\"El dungeon master no miente... solo improvisa la verdad.\"",
-    "\"No es una trampa si el bardo consigue un 20 en Persuasión.\"",
-    "\"Cada puerta cerrada es una oportunidad para el pícaro.\"",
-    "\"El grupo decidió dividirse. El dungeon master sonrió.\"",
-    "\"Un crítico en el peor momento posible... como siempre.\"",
-    "\"¿Negociar con el dragón? El clérigo tiró un 3. Buena suerte.\"",
-    "\"El mago dijo: 'Confíen en mí'. Nadie sobrevivió para arrepentirse.\"",
-    "\"El mapa decía 'aquí hay monstruos'. El grupo fue de todas formas.\"",
-    "\"Todo daño de fuego es culpa del hechicero. Sin excepciones.\"",
-    "\"Los héroes descansan un momento... el dungeon no descansa nunca.\"",
-    "\"El dado rueda. El destino espera. La taberna cierra pronto.\"",
+    '"Un d20 decide el destino de héroes y dioses por igual."',
+    '"El dungeon master no miente... solo improvisa la verdad."',
+    '"No es una trampa si el bardo consigue un 20 en Persuasión."',
+    '"Cada puerta cerrada es una oportunidad para el pícaro."',
+    '"El grupo decidió dividirse. El dungeon master sonrió."',
+    '"Un crítico en el peor momento posible... como siempre."',
+    '"¿Negociar con el dragón? El clérigo tiró un 3. Buena suerte."',
+    '"El mago dijo: \'Confíen en mí\'. Nadie sobrevivió para arrepentirse."',
+    '"El mapa decía \'aquí hay monstruos\'. El grupo fue de todas formas."',
+    '"Todo daño de fuego es culpa del hechicero. Sin excepciones."',
 ];
 
 const LOADING_STEPS = [
@@ -1192,88 +992,61 @@ const LOADING_STEPS = [
     const barEl = document.getElementById('loading-bar');
     const statusEl = document.getElementById('loading-status');
 
-    // Frase aleatoria inicial
     quoteEl.textContent = DD_QUOTES[Math.floor(Math.random() * DD_QUOTES.length)];
 
-    // Rotar frases cada 3 s
     const quoteInterval = setInterval(() => {
         quoteEl.style.animation = 'none';
-        quoteEl.offsetHeight; // reflow
+        void quoteEl.offsetHeight;
         quoteEl.style.animation = '';
         quoteEl.textContent = DD_QUOTES[Math.floor(Math.random() * DD_QUOTES.length)];
     }, 3000);
 
-    // Simular progreso
     let step = 0;
-    const totalSteps = LOADING_STEPS.length;
-
     const progressInterval = setInterval(() => {
         step++;
-        barEl.style.width = `${(step / totalSteps) * 100}%`;
+        barEl.style.width = `${(step / LOADING_STEPS.length) * 100}%`;
         statusEl.textContent = LOADING_STEPS[step - 1];
-
-        if (step >= totalSteps) {
+        if (step >= LOADING_STEPS.length) {
             clearInterval(progressInterval);
             clearInterval(quoteInterval);
-            setTimeout(hideLoadingScreen, 600);
         }
     }, 500);
 })();
 
-function hideLoadingScreen() {
+function hideLoader() {
     const screen = document.getElementById('loading-screen');
+    if (!screen) return;
     screen.style.transition = 'opacity 0.8s ease';
     screen.style.opacity = '0';
     setTimeout(() => screen.remove(), 800);
 }
-function openDMTab(name) {
-    // Añade dm-tab-items aquí:
-    document.querySelectorAll('#dm-tab-map, #dm-tab-entities, #dm-tab-combat, #dm-tab-items')
-        .forEach(t => t.style.display = 'none');
 
-    document.getElementById(`dm-tab-${name}`).style.display = 'block';
-
-    // Añade dm-tab-btn-items aquí:
-    document.querySelectorAll('#dm-tab-btn-map, #dm-tab-btn-entities, #dm-tab-btn-combat, #dm-tab-btn-items')
-        .forEach(b => b.classList.remove('active'));
-
-    document.getElementById(`dm-tab-btn-${name}`).classList.add('active');
-
-    if (name === 'items') {
-        socket.emit('get_items');
-    }
-}
+/* ================================
+   GIVE ITEM OVERLAY
+================================ */
 let _pendingGiveItemId = null;
-
 
 function openGiveItemPopup(itemId, itemName) {
     _pendingGiveItemId = itemId;
-
     document.getElementById('give-item-name').textContent = `Objeto: ${itemName || itemId}`;
 
     const playerListEl = document.getElementById('give-item-player-list');
     playerListEl.innerHTML = '';
 
-    if (dm_player_list.length === 0) {
-        playerListEl.innerHTML = '<p style="color:#888; font-size:0.85rem;">Sin jugadores conectados.</p>';
+    if (!dm_player_list.length) {
+        playerListEl.innerHTML = '<p style="color:#888;font-family:\'IM Fell English\',serif;font-style:italic;">Sin jugadores conectados.</p>';
     } else {
         dm_player_list.forEach(char => {
             const btn = document.createElement('button');
-            btn.style.cssText = `
-        background:#0d1117; border:1px solid #d4a853; color:#d4a853;
-        padding:10px 14px; border-radius:8px; cursor:pointer;
-        font-family:'Cinzel',serif; font-size:0.9rem; text-align:left;
-        transition:background 0.2s; width:100%;
-      `;
+            btn.className = 'give-item-btn';
             btn.textContent = `🧙 ${char.name}`;
-            btn.onmouseover = () => btn.style.background = '#1f1a0e';
-            btn.onmouseout = () => btn.style.background = '#0d1117';
-            btn.onclick = () => confirmGiveItem(char.id, char.name);
+            btn.onclick = () => confirmGiveItem(char.id);
             playerListEl.appendChild(btn);
         });
     }
 
-    document.getElementById('give-item-overlay').style.display = 'flex';
+    const overlay = document.getElementById('give-item-overlay');
+    overlay.style.display = 'flex';
 }
 
 function closeGiveItemPopup() {
@@ -1281,19 +1054,14 @@ function closeGiveItemPopup() {
     _pendingGiveItemId = null;
 }
 
-function confirmGiveItem(targetCharId, targetName) {
-    if (!_pendingGiveItemId || !targetCharId) return;
-
+function confirmGiveItem(targetCharId) {
+    if (!_pendingGiveItemId) return;
     socket.emit('dm_give_item', {
         campaign_code: campaignCode,
         item_instance_id: _pendingGiveItemId,
         target_player_id: targetCharId,
     });
-
     closeGiveItemPopup();
 }
 
-// Reemplaza la función anterior
-function giveItemToPlayer(itemId, itemName) {
-    openGiveItemPopup(itemId, itemName);
-}
+function giveItemToPlayer(itemId, itemName) { openGiveItemPopup(itemId, itemName); }

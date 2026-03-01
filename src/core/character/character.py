@@ -5,7 +5,7 @@ from src.core.items.item import ItemInstance, Weapon
 from ..base import Actor
 from .ClassFeature import ClassFeature
 from .race import Race, ATTRIBUTE_KEYS
-from .dndclass import DnDClass
+from .dndclass import SKILL_KEY_TO_DESCRIPTION, SKILL_KEY_TO_NAME, DnDClass
 import random
 import uuid
 
@@ -201,7 +201,14 @@ class Character(Actor):
             "saving_throw_proficiencies": list(self.saving_throw_proficiencies),
             "weapon_proficiencies": list(self.weapon_proficiencies),
             "armor_proficiencies": list(self.armor_proficiencies),
-            "skill_proficiencies": list(self.skill_proficiencies),
+            "skill_proficiencies": [
+                {
+                    "key": key,
+                    "name": SKILL_KEY_TO_NAME.get(key),
+                    "description": SKILL_KEY_TO_DESCRIPTION.get(key),
+                }
+                for key in self.skill_proficiencies
+            ],
             "features": [
                 {
                     "name": f.name,

@@ -331,9 +331,7 @@ def register_socket_handlers(
             game_states_dict[code] = build_game_state(code, campaigns_dict, character_repo)
         game_state = game_states_dict[code]
 
-        # -------------------------
-        # TOKENS
-        # -------------------------
+
         character_ids = [
             UUID(p["character_uuid"])
             for p in players
@@ -497,7 +495,7 @@ def register_socket_handlers(
             return
 
         state = get_game_state(campaign_code)
-
+        
         character: Character = state.characters.get(UUID(character_id))
         if not character:
             emit("error", {"message": "Character not found"})
@@ -561,7 +559,8 @@ def register_socket_handlers(
             return
         state = get_game_state(code)
 
-        character = state.characters.get(UUID(character_id))
+        character: Character = state.characters.get(UUID(character_id))
+        print(character.to_json())
         if not character:
             emit("error", {"message": "Character not found"})
             return
@@ -651,9 +650,25 @@ def register_socket_handlers(
         )
         state = get_game_state(data["campaign_code"])
         StartCombatAction(start_cmd).execute(state)
-        emit("combat_started")
+        emit("combat_started", to=data["campaign_code"])
 
     @socketio.on("enemy_attack")
+    def handle_enemy_attack(data):
+        state = get_game_state(data["campaig_code"])
+        attack_command = AttackCommand(
+            actor_id=data["character_id"],
+            target_id=data["target_id"],
+            mode=data["attack_mode"],
+            advantage=data["advantage"],
+            disadvantage=data["disadvantage"],
+            attack_name=data["attack_name"]
+        )
+        result = AttackAction(attack_command).execute(state)
+        
+        socketio.emit("attack_result", result.payload)
+
+        next_turn(state, data["character_id"])
+    
     @socketio.on("player_attack")
     def handle_attack(data):
         state = get_game_state(data["campaig_code"])

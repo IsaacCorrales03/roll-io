@@ -620,3 +620,46 @@ CLASS_MAP: dict[str, Type[DnDClass]] = {
     "Paladin": Paladin,
     "Picaro": Rogue,
 }
+
+SKILL_NAME_TO_KEY: dict[str, str] = {
+    "Acrobatismo": "acrobatics",
+    "Trato con Animales": "animal_handling",
+    "Arcanos": "arcana",
+    "Atletismo": "athletics",
+    "Engaño": "deception",
+    "Historia": "history",
+    "Perspicacia": "insight",
+    "Intimidación": "intimidation",
+    "Investigación": "investigation",
+    "Medicina": "medicine",
+    "Naturaleza": "nature",
+    "Percepción": "perception",
+    "Actuación": "performance",
+    "Persuasión": "persuasion",
+    "Religión": "religion",
+    "Juego de Manos": "sleight_of_hand",
+    "Sigilo": "stealth",
+    "Supervivencia": "survival"
+}
+
+SKILL_KEY_TO_DESCRIPTION: dict[str, str] = {
+    "acrobatics": "Permite realizar acciones de destreza como equilibrio, piruetas, huidas ágiles o parkour.",
+    "animal_handling": "Permite calmar, entrenar o controlar animales.",
+    "arcana": "Conocimiento sobre magia, planos, criaturas arcanas y fenómenos sobrenaturales.",
+    "athletics": "Capacidad física para trepar, saltar, nadar o forzar objetos.",
+    "deception": "Habilidad para mentir, disfrazar la verdad o engañar a otros.",
+    "history": "Conocimiento sobre eventos históricos, culturas y civilizaciones.",
+    "insight": "Permite detectar mentiras y leer intenciones o emociones.",
+    "intimidation": "Capacidad para infundir miedo o imponer autoridad.",
+    "investigation": "Permite analizar pistas, deducir información y examinar detalles.",
+    "medicine": "Conocimiento para estabilizar heridas o diagnosticar condiciones físicas.",
+    "nature": "Conocimiento sobre flora, fauna, clima y entornos naturales.",
+    "perception": "Capacidad para notar detalles ocultos mediante los sentidos.",
+    "performance": "Habilidad artística como música, canto, actuación o declamación.",
+    "persuasion": "Capacidad para convencer mediante argumentos o carisma.",
+    "religion": "Conocimiento sobre deidades, cultos y tradiciones religiosas.",
+    "sleight_of_hand": "Permite realizar trucos manuales, hurtos discretos o manipulaciones rápidas.",
+    "stealth": "Capacidad para moverse sin ser detectado.",
+    "survival": "Habilidad para orientarse, rastrear y sobrevivir en entornos salvajes."
+}
+SKILL_KEY_TO_NAME = {v: k for k, v in SKILL_NAME_TO_KEY.items()}
