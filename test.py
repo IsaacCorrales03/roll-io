@@ -45,7 +45,7 @@ state.dispatcher.register("combat_started", CombatStartedHandler())
 state.register_query_handler(GetArmorClass, GetArmorClassHandler())
 state.register_query_handler(GetStatModifier, GetStatModifierHandler())
 state.register_query_handler(GetEntities, GetEntitiesHandler())
-
+state.register_query_handler(GetProficiencyBonus, GetProficiencyBonusHandler())
 
 
 def iniciar_combate(enemigos: list[Enemy], jugadores: list[Actor], estado_de_juego):
@@ -107,6 +107,7 @@ def iniciar_combate(enemigos: list[Enemy], jugadores: list[Actor], estado_de_jue
             )
         # Ahora ejecutamos el comando:
         resultado_del_ataque = AttackAction(attack_command).execute(state)
+
         info = resultado_del_ataque.payload
         fallo = resultado_del_ataque.type == "attack_miss"
         ataque_cancelado = resultado_del_ataque.type == "attack_failed"
@@ -127,5 +128,6 @@ def iniciar_combate(enemigos: list[Enemy], jugadores: list[Actor], estado_de_jue
             print("El combate ha terminado")
             print("El ganador del combate es:", current_actor.name)
 
+print(hero.dnd_class.weapon_proficiencies)
 
 iniciar_combate([goblin], [hero], state)

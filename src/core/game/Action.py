@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from src.core.character.character import Character
+from src.core.items.item import Weapon
 from src.core.character.enemy import Enemy
 from src.core.game.Event import EventContext, Event, GameState
 from src.core.game.commands import *
@@ -226,8 +228,19 @@ class AttackAction(Action):
 
         ac_query = GetArmorClass(actor_id=target.id, context="attack")
         target_ac = state.query(ac_query).value
+        prof_bonus_query = GetProficiencyBonus(actor_id=attacker.id)
+        prof_bonus = state.query(prof_bonus_query).value
 
-        attack_bonus = getattr(weapon, "bonus", 0) + stat_mod
+        # Verificar si el personaje es competente con el arma
+        is_proficient = False
+        if hasattr(attacker, "dnd_class") and isinstance(attacker, Character) and isinstance(weapon, Weapon):
+            is_proficient = weapon.proficiency_type in attacker.dnd_class.weapon_proficiencies
+
+        proficiency_bonus = prof_bonus if is_proficient else 0
+        print(proficiency_bonus)
+        attack_bonus = (
+            getattr(weapon, "bonus", 0) + stat_mod + proficiency_bonus
+        )   
         attack_score = roll_result["total"] + attack_bonus
 
         natural_roll = roll_result["rolls"][0]
@@ -292,6 +305,7 @@ class AttackAction(Action):
             payload={
                 "target_id": target.id,
                 "damage": damage_total,
+                "profiency": proficiency_bonus,
                 "critical": critical,
                 "weapon": getattr(weapon, "name", "Enemy Attack")
             },

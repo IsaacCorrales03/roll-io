@@ -198,7 +198,7 @@ window.onload = () => {
                     ? 'linear-gradient(90deg,#d97706,#f59e0b)'
                     : 'linear-gradient(90deg,#8a6830,#d4a853)';
         }
-        socket.emit("get_ac", { actor_id: myCharacterId });
+    socket.emit("get_ac", { actor_id: myCharacterId });
         const STAT_MAP = { STR: 'STR', DEX: 'DEX', CON: 'CON', INT: 'INT', WIS: 'WIS', CHA: 'CHA' };
         const statsDiv = document.getElementById('stats');
         statsDiv.innerHTML = ''; // limpiar antes
@@ -283,8 +283,16 @@ window.onload = () => {
         // Equipo
         renderCharacterGearAndInventory(c);
     });
-    socket.on("combat_started", d => {
-        showPanel('combat-panel', 'toggle-combat-panel');
+    socket.on("combat_started", d => {      
+        if (isDM) {
+            console.log("combat started but is DM")
+            showPanel('dm-panel', 'toggle-dm-panel');
+        } else {
+            console.log("combat started")
+            hidePanel('player-panel', 'toggle-player-panel');
+            showPanel('combat-panel', 'toggle-combat-panel')
+        }
+
     })
 };
 
@@ -901,11 +909,15 @@ function createCombatItem(entity, type) {
         <span style="flex:1;font-family:'Cinzel',serif;font-size:13px;">${entity.name}</span>
         <span style="font-size:12px;color:#9a8060;font-family:'Cinzel',serif;">${entity.hp}/${entity.max_hp}</span>
     `;
-    div.onclick = () => toggleCombatSelection(div, entity.id);
+    div.addEventListener("click", () => {
+            toggleCombatSelection(div, entity.id);
+    });
+
     return div;
 }
 
 function toggleCombatSelection(el, id) {
+    console.log("selected ", el, id)
     if (selectedCombatants.has(id)) {
         selectedCombatants.delete(id);
         el.classList.remove("selected");
@@ -914,12 +926,21 @@ function toggleCombatSelection(el, id) {
         el.classList.add("selected");
     }
 }
-
 function startCombat() {
-    if (selectedCombatants.size < 2) { console.warn("Se requieren al menos 2 combatientes"); return; }
-    socket.emit("start_combat", { campaign_code: campaignCode, combatants: Array.from(selectedCombatants) });
+
+    if (selectedCombatants.size < 2) {
+        console.warn("Se requieren al menos 2 combatientes");
+        return;
+    }
+
+    socket.emit("start_combat", {
+        campaign_code: campaignCode,
+        combatants: Array.from(selectedCombatants)
+    });
+
     selectedCombatants.clear();
-    document.querySelectorAll(".combat-item.selected").forEach(el => el.classList.remove("selected"));
+    document.querySelectorAll(".combat-item.selected")
+        .forEach(el => el.classList.remove("selected"));
 }
 
 /* ================================
@@ -966,18 +987,79 @@ function setupDMControls() {
    LOADING SCREEN
 ================================ */
 const DD_QUOTES = [
-    '"Un d20 decide el destino de héroes y dioses por igual."',
-    '"El dungeon master no miente... solo improvisa la verdad."',
-    '"No es una trampa si el bardo consigue un 20 en Persuasión."',
-    '"Cada puerta cerrada es una oportunidad para el pícaro."',
-    '"El grupo decidió dividirse. El dungeon master sonrió."',
-    '"Un crítico en el peor momento posible... como siempre."',
-    '"¿Negociar con el dragón? El clérigo tiró un 3. Buena suerte."',
-    '"El mago dijo: \'Confíen en mí\'. Nadie sobrevivió para arrepentirse."',
-    '"El mapa decía \'aquí hay monstruos\'. El grupo fue de todas formas."',
-    '"Todo daño de fuego es culpa del hechicero. Sin excepciones."',
-];
 
+    // ÉPICAS
+    "No necesito suerte. Necesito alcance.",
+    "Mi espada recuerda cada nombre que pronuncio.",
+    "Si el destino quiere guerra, tendrá guerra.",
+    "No todos sobreviven a una profecía. Yo sí.",
+    "El miedo es para los que dudan.",
+    "He visto demonios suplicar. Tú no impresionarás.",
+    "Hoy no caeré. Hoy avanzamos.",
+    "Mi juramento pesa más que tu armadura.",
+    "No lucho por gloria. Lucho porque debo.",
+    "Si esta es mi última batalla, que la recuerden.",
+
+    // OSCURAS
+    "Esa sombra no es nuestra.",
+    "El silencio aquí no está vacío.",
+    "El aire sabe a tumba antigua.",
+    "La puerta no crujió. Susurró.",
+    "Algo respira detrás del muro.",
+    "No todos los ecos repiten sonidos.",
+    "El mapa termina. El horror no.",
+    "La antorcha parpadea cuando miente.",
+    "Ese frío no es natural.",
+    "No estamos solos. Nunca lo estuvimos.",
+
+    // MESA / CAOS
+    "El plan era bueno hasta que empezamos a ejecutarlo.",
+    "¿Seguro que tocar eso es buena idea?",
+    "El bardo dijo que funcionaría.",
+    "Dividirse siempre termina igual.",
+    "Eso no estaba en el plan. ¿Había plan?",
+    "El pícaro sonrió. Mal presagio.",
+    "El clérigo dejó de sonreír.",
+    "El mago pidió seis segundos más.",
+    "Nadie revisó si había trampas. Nadie.",
+    "La estrategia murió en el primer turno.",
+
+    // POR CLASE
+    "Mi furia no negocia.",
+    "El acero responde mejor que las palabras.",
+    "La magia es disciplina, no espectáculo.",
+    "El oro cambia manos. Yo no.",
+    "La luz juzga.",
+    "Mi patrono observa.",
+    "El bosque escucha.",
+    "El ki fluye, aunque el enemigo no.",
+    "Las sombras son pacientes.",
+    "Un crítico no es suerte. Es preparación.",
+
+    // DRAMÁTICAS
+    "Si caigo, que sea avanzando.",
+    "Prometí protegerlos. Y cumplo.",
+    "No era el héroe que querían. Era el que necesitaban.",
+    "El sacrificio no siempre es visible.",
+    "No todos los monstruos llevan garras.",
+    "Cada cicatriz tiene un nombre.",
+    "El deber no descansa.",
+    "He perdido antes. No otra vez.",
+    "Que canten sobre esto.",
+    "Si sobrevivo, beberemos. Si no, recuérdenme.",
+
+    // COMBATE
+    "Rueda el dado.",
+    "Que decida el acero.",
+    "Uno más.",
+    "Mantengan la línea.",
+    "Apunten al flanco.",
+    "Ahora.",
+    "No retrocedan.",
+    "Es ahora o nunca.",
+    "Respiren. Golpeen.",
+    "Terminemos esto."
+];
 const LOADING_STEPS = [
     "Generando el mundo...",
     "Despertando a los monstruos...",

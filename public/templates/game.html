@@ -416,6 +416,19 @@
             panel.classList.add('panel-collapsed');
             toggle.classList.remove('panel-open');
         }
+        function hidePanel(panelId, toggleId) {
+            const panel = document.getElementById(panelId);
+            const toggle = document.getElementById(toggleId);
+            if (!panel || !toggle) return;
+
+            // Remover estados visuales
+            panel.classList.remove('panel-collapsed');
+            toggle.classList.remove('panel-open');
+
+            // Ocultar completamente
+            panel.style.display = 'none';
+            toggle.style.display = 'none';
+        }
     </script>
     <script src="{{ url_for('static', filename='js/game.js') }}" defer></script>
 </body>

@@ -23,3 +23,8 @@ class StatModifierResult(QueryResult):
 @dataclass
 class GetActorsAtLocationResult(QueryResult):
     actors: list["Actor"] 
+
+@dataclass
+class ProficiencyBonusResult(QueryResult):
+    value: int
+    breakdown: list[dict]

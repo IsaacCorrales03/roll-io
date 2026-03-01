@@ -43,6 +43,7 @@ class Weapon(Item):
                  dice_count: int,
                  dice_size: str,
                  attribute: str,
+                 proficiency_type: str,
                  bonus: int = 0,
                  range: int = 5, 
                  long_range: int | None = None,
@@ -58,7 +59,7 @@ class Weapon(Item):
 
         # Cantidad de dados de daño (ej. 2d6 → dice_count = 2)
         self.dice_count = dice_count
-
+        self.proficiency_type = proficiency_type
         # Tamaño del dado de daño (ej. d6, d8, d12)
         self.dice_size = dice_size
 
@@ -73,6 +74,8 @@ class Weapon(Item):
         # Alcance en pies
         self.range = range
         self.long_range = long_range
+    def get_dice(self):
+        return self.dice_size
 
 class Armor(Item):
     def __init__(

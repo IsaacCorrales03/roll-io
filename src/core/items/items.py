@@ -20,11 +20,14 @@ ITEMS: dict[str, Item] = {
     LONG_SWORD: Weapon(
         item_id=LONG_SWORD,
         name="Long Sword",
+        description="A versatile melee weapon that can be used with one or two hands.",
         weight=3.0,
         dice_count=1,
-        dice_size="1d8",
+        dice_size="1d8", 
         attribute="STR",
-        description="A versatile melee weapon that can be used with one or two hands.",
+        proficiency_type="martial_weapons",
+        damage_type="slashing",
+        range=5
     ),
 
     IRON_ARMOR: Armor(

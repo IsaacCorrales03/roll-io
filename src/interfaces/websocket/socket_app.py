@@ -560,7 +560,6 @@ def register_socket_handlers(
         state = get_game_state(code)
 
         character: Character = state.characters.get(UUID(character_id))
-        print(character.to_json())
         if not character:
             emit("error", {"message": "Character not found"})
             return
@@ -638,9 +637,17 @@ def register_socket_handlers(
         if not success:
             emit("error", {"message": "No se puede añadir el item al inventario"})
             return
-        print(character.inventory)
         emit("dm_give_item_success", {"player_id": target_player_id})
 
+    @socketio.on("get_attacks")
+    def get_attacks(data):
+        character_uuid = data["character_uuid"]
+        campaign_code = data["campaign_code"]
+
+        state = get_game_state(campaign_code)
+        character: Character = state.characters.get(character_uuid)
+
+        pass
     @socketio.on("start_combat")
     def start_combat(data):
         print(data)

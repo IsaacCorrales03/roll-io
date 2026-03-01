@@ -125,6 +125,29 @@ class GetLocationContents(Query):
 class GetAvailableMoves(Query):
     location_id: UUID
 
+@dataclass(frozen=True)
+class GetProficiencyBonus(Query):
+    actor_id: UUID
+
+class GetProficiencyBonusHandler(QueryHandler[GetProficiencyBonus, ProficiencyBonusResult]):
+    def handle(self, query: GetProficiencyBonus, state: GameState) -> ProficiencyBonusResult:
+        actor = state.get_actor(query.actor_id)
+        if actor is None:
+            raise RuntimeError("Actor no encontrado")
+
+        # Si no tiene nivel (ej: enemigos simples)
+        level = getattr(actor, "level", 1)
+
+        # Fórmula oficial 5e
+        bonus = 2 + ((level - 1) // 4)
+
+        return ProficiencyBonusResult(
+            value=bonus,
+            breakdown=[
+                {"source": "level", "value": bonus}
+            ]
+        )
+
 class GetActorLocationHandler(QueryHandler):
     def handle(self, query: GetActorLocation, state: GameState):
         actor = state.characters.get(query.actor_id)

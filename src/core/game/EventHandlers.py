@@ -381,26 +381,4 @@ class CombatEndHandler(EventHandler):
         state.current_phase = Phase.EXPLORATION
         state.initiative_order.clear()
         state.current_actor = None
-
-class CombatLogger(EventHandler):
-    def handle(self, event: Event, state: GameState) -> None:
-        if event.type == "attack_roll":
-            print(f"{state.get_actor(event.context.actor_id).name} attack_roll: {event.payload["attack_score"]}") # type: ignore
-
-        elif event.type == "attack_hit":
-            print(f"Hit! Damage: {event.payload['damage']}")
-
-        elif event.type == "attack_miss":
-            print("Miss!")
-
-        elif event.type == "attack_failed":
-            fallador = state.get_actor(event.context.actor_id) # type: ignore
-            print(f"{fallador.name} falló el ataque por: {event.payload["reason"]}") #type: ignore
-        elif event.type == "entity_killed":
-            print(f"{state.get_actor(event.context.actor_id).name} died") # type: ignore
-
-        elif event.type == "turn_ended":
-            print("Turn ended")
-        elif event.type == "combat_ended":
-            print("Combate finalizado")
-        
+    

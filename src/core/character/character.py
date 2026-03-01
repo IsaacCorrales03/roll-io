@@ -149,7 +149,23 @@ class Character(Actor):
                 self.equip(instance)
 
     
+    def get_attack(self) -> dict:
+        if self.weapon is None:
+            return {}
 
+        return {
+            "attack": "Ataque con arma",
+            "weapon_name": self.weapon.name,
+            "damage": f"{self.weapon.dice_count}{self.weapon.dice_size}"
+                    f"{f' + {self.weapon.bonus}' if self.weapon.bonus else ''}",
+            "damage_type": self.weapon.damage_type,
+            "attribute": self.weapon.attribute,
+            "attack_modifier": getattr(self, f"{self.weapon.attribute.lower()}_mod", 0)
+                            + self.proficiency_bonus,
+            "range": self.weapon.range,
+            "long_range": self.weapon.long_range,
+            "bonus_damage": self.weapon.bonus
+        }
 
 
     def to_json(self) -> dict:
