@@ -246,6 +246,7 @@ class CreateEnemyHandler(EventHandler):
 
         enemy = Enemy(
             id=event.payload["id"],
+            owner_id="1234-1234-1234-1234",
             name=event.payload["name"],
             hp=event.payload["hp"],
             max_hp=event.payload["max_hp"],
@@ -256,7 +257,7 @@ class CreateEnemyHandler(EventHandler):
             attacks=enemy_attacks
         )
 
-        state.enemies[enemy.id] = enemy
+        state.add_enemy(enemy)
 
         enemy_token = Token(
             id=enemy.id,

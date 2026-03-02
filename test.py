@@ -119,6 +119,8 @@ def iniciar_combate(enemigos: list[Enemy], jugadores: list[Actor], estado_de_jue
             print(f"{current_actor.name} atacó a {target.name} y le infligió {info["damage"]} puntos de daño")
             if info["critical"]:
                 print("Fue crítico!")
+            if info["profiency"]:
+                print(f"Usó una competencia de +{info["profiency"]}")
 
 
         endTurn_command = EndTurnCommand(current_actor.id)
@@ -127,7 +129,5 @@ def iniciar_combate(enemigos: list[Enemy], jugadores: list[Actor], estado_de_jue
         if finalizo_el_combate: 
             print("El combate ha terminado")
             print("El ganador del combate es:", current_actor.name)
-
-print(hero.dnd_class.weapon_proficiencies)
 
 iniciar_combate([goblin], [hero], state)

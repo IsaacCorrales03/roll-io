@@ -5,6 +5,7 @@ from flask_cors import CORS
 import time
 
 # Blueprints
+
 from src.interfaces.http.routes.races_routes import races_bp
 from src.interfaces.http.routes.dnd_clasess_routes import classes_bp
 from src.interfaces.http.routes.characters_routes import character_bp
@@ -28,6 +29,8 @@ from src.features.world.infrastructure.MySQLSectionRepository import MySQLSectio
 from src.features.world.application.section_service import SectionService
 from src.features.world.infrastructure.MySQLTokenRepository import MySQLTokenRepository
 from src.features.world.application.token_service import TokenService
+from src.features.enemies.application.enemy_service import EnemyService
+from src.features.enemies.infrastructure.enemy_repository import EnemyRepository
 
 # Utils
 from src.shared.utils.gen_code import generate_campaign_code
@@ -78,7 +81,8 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
     section_service = SectionService(section_repo)
     token_repo = MySQLTokenRepository(db)
     token_service = TokenService(token_repo)
-
+    enemy_repo = EnemyRepository()
+    enemy_service = EnemyService(enemy_repo)
     # Store shared dictionaries in app config
     app.config['CAMPAIGNS'] = campaigns_dict
     app.config['WORLDS'] = worlds_dict
@@ -100,6 +104,7 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
     @app.before_request
     def inject_services():
         g.auth_service = auth_service
+        g.enemy_service = enemy_service
         g.character_service = character_service
         g.campaign_service = campaign_service
         g.world_service = world_service
@@ -111,7 +116,8 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
         "campaign_service": campaign_service,
         "world_service": world_service,
         "section_service": section_service,
-        "token_service": token_service
+        "token_service": token_service,
+        "enemy_service": enemy_service
     }
     app.extensions["repos"] = {
         "user_repo": user_repo,
@@ -120,7 +126,8 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
         "campaign_repo": campaign_repo,
         "world_repo": world_repo,
         "section_repo": section_repo,
-        "token_repo": token_repo
+        "token_repo": token_repo,
+        "enemy_repo": enemy_repo
     }
 
     @app.context_processor
@@ -247,12 +254,15 @@ def create_app(campaigns_dict: dict, worlds_dict: dict, game_states_dict: dict):
 
         characters = character_repo.get_by_owner(str(user.id))
         campaigns = campaign_repo.get_by_owner(str(user.id))
-
-        return render_template("dashboard.html", user=user, characters=characters, campaigns=campaigns)
+        enemies = enemy_repo.get_by_owner(str(user.id))
+        return render_template("dashboard.html", user=user, characters=characters, campaigns=campaigns, enemies=enemies)
 
     @app.route("/create_char")
     def create_char():
         return render_template("create_char.html")
+    @app.route("/create_enemy")
+    def create_enemy():
+        return render_template("create_enemy.html")
 
     @app.route("/create_campaign")
     def create_campaign_view():

@@ -27,7 +27,7 @@ ITEMS: dict[str, Item] = {
         attribute="STR",
         proficiency_type="martial_weapons",
         damage_type="slashing",
-        range=5
+        range=2
     ),
 
     IRON_ARMOR: Armor(

@@ -170,6 +170,7 @@ class GameState:
     def add_character(self, character: Actor):
         if not character.id in self.characters:
             self.characters[character.id] = character
+    
     def add_enemy(self, enemy: Enemy):
         if not enemy.id in self.enemies:
             self.enemies[enemy.id] = enemy
@@ -188,12 +189,22 @@ class GameState:
             return self.enemies[actor_id]
 
         return None
-    def get_actor(self, actor_id: UUID):
+    from uuid import UUID
+
+    def get_actor(self, actor_id):
+        # Convertir a UUID si viene como string
+        if isinstance(actor_id, str):
+            try:
+                actor_id = UUID(actor_id)
+            except ValueError:
+                return None
+
         if actor_id in self.characters:
             return self.characters[actor_id]
         if actor_id in self.enemies:
             return self.enemies[actor_id]
         return None
+    
     def iter_combatants(self):
         for character in self.characters.values():
             yield character

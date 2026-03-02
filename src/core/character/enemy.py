@@ -1,4 +1,4 @@
-from uuid import uuid4
+from uuid import UUID, uuid4
 from src.core.base import Movement
 from dataclasses import dataclass
 
@@ -20,8 +20,13 @@ class EnemyAttack:
     
 
 class Enemy:
-    def __init__(self, id, name, hp, max_hp, ac, asset_url, size=(1, 1), attributes: dict[str, int] | None = None, attacks: list[EnemyAttack] | None = None):
-        self.id = id
+    def __init__(self, id: UUID,owner_id, name, hp, max_hp, ac, asset_url, size=(1, 1), attributes: dict[str, int] | None = None, attacks: list[EnemyAttack] | None = None):
+        if id is None:
+            self.id = uuid4()
+        elif isinstance(id, str):
+            self.id = UUID(id)
+        else:
+            self.id = id
         self.name = name
         self.hp = hp
         self.max_hp = max_hp
@@ -34,6 +39,7 @@ class Enemy:
         self.active_conditions = []
         self.temp_bonuses = []
         self.position = (0,0)
+        self.owner_id = owner_id
         self.attributes = attributes or {
             "STR": 10,
             "DEX": 10,
@@ -72,3 +78,27 @@ class Enemy:
     
     def choose_attack(self, target) -> EnemyAttack:
         return self.attacks[0]
+    
+    def to_json(self) -> dict:
+        return {
+            "id": str(self.id),
+            "owner_id": str(self.owner_id),
+            "name": self.name,
+            "hp": self.hp,
+            "max_hp": self.max_hp,
+            "ac": self.ac,
+            "asset_url": self.asset_url,
+            "size": self.size,
+            "attributes": self.attributes,
+            "attacks": [
+                {
+                    "name": atk.name,
+                    "dice_count": atk.dice_count,
+                    "dice_size": atk.dice_size,
+                    "damage_bonus": atk.damage_bonus,
+                    "attack_bonus": atk.attack_bonus,
+                    "damage_type": atk.damage_type,
+                }
+                for atk in self.attacks
+            ],
+        }

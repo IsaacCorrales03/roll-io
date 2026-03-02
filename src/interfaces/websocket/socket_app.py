@@ -298,6 +298,7 @@ def register_socket_handlers(
         # -------------------------
         from flask import current_app
         services = current_app.extensions["services"]
+        repos = current_app.extensions["repos"]
         world = services["world_service"].get_by_id(campaign_instance["world_id"])
         if not world:
             emit("load_game_error", {"error": "Mundo no encontrado"})
@@ -353,9 +354,13 @@ def register_socket_handlers(
         if not current_scene:
             emit("load_game_error", {"error": "Escena no encontrada"})
             return
-
+        enemy_repo = repos["enemy_repo"]
         current_section = current_scene.sections[0] if current_scene.sections else None
-
+        if is_dm:
+            owner_enemies = [e for e in enemy_repo.get_by_owner(user_id)]
+        else:
+            owner_enemies = []
+        
         # -------------------------
         # EMIT DATA
         # -------------------------
@@ -371,6 +376,7 @@ def register_socket_handlers(
                 "name": current_scene.name,
                 "map_url": current_scene.map_url
             },
+            "owner_enemies": owner_enemies,
             "current_section": current_section.to_dict() if current_section else None,
             "tokens": tokens,
             "my_character_id": my_character_id,
@@ -378,7 +384,84 @@ def register_socket_handlers(
             "is_dm": is_dm
         })
 
+    @socketio.on("invoke_enemy")
+    def handle_invoke_enemy(data):
+        campaign_code = data.get("campaign_code")
+        enemy_id = data.get("enemy_id")
+        x = data.get("x", 0)
+        y = data.get("y", 0)
 
+        if not campaign_code or not enemy_id:
+            emit("error", {"message": "Missing campaign_code or enemy_id"})
+            return
+
+        state = game_states_dict.get(campaign_code)
+        if not state:
+            emit("error", {"message": "Invalid campaign"})
+            return
+
+        # Cargar el enemigo desde la DB
+        from flask import current_app
+        repos = current_app.extensions["repos"]
+        enemy_repo = repos["enemy_repo"]
+
+        enemy = enemy_repo.get_by_id(enemy_id)
+        if not enemy:
+            emit("error", {"message": "Enemy not found"})
+            return
+
+        # Cada invocación es una instancia nueva con su propio token_id
+        token_id = str(uuid4())
+
+        event = Event(
+            type="create_enemy",
+            payload={
+                "id": token_id,
+                "name": enemy["name"],
+                "hp": enemy["hp"],
+                "max_hp": enemy["max_hp"],
+                "ac": enemy["ac"],
+                "asset_url": enemy.get("asset_url"),
+                "size": (enemy.get("size_x", 1), enemy.get("size_y", 1)),
+                "attributes": {
+                    "STR": enemy.get("str", 10),
+                    "DEX": enemy.get("dex", 10),
+                    "CON": enemy.get("con", 10),
+                    "INT": enemy.get("int_stat", 10),
+                    "WIS": enemy.get("wis", 10),
+                    "CHA": enemy.get("cha", 10),
+                },
+                "attacks": [
+                    {
+                        "name": atk["name"],
+                        "dice_count": atk["dice_count"],
+                        "dice_size": atk["dice_size"],
+                        "damage_bonus": atk.get("damage_bonus", 0),
+                        "attack_bonus": atk.get("attack_bonus", 0),
+                        "damage_type": atk.get("damage_type", "slashing"),
+                    }
+                    for atk in (enemy.get("attacks") or [])
+                ],
+                "position": (x, y)
+            },
+            cancelable=False
+        )
+
+        try:
+            state.dispatch(event)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            emit("error", {"message": str(e)})
+            return
+        token_data = serialize_token(state.tokens[token_id])
+        token_data["enemy_id"] = enemy_id 
+        print(token_data)
+        socketio.emit(
+            "enemy_created",
+            token_data,
+            to=campaign_code
+        )
     @socketio.on("get_entities")
     def handle_get_entities(data): 
         campaign_code = socket_campaigns_dict.get(request.sid)  # type: ignore
@@ -637,17 +720,37 @@ def register_socket_handlers(
         if not success:
             emit("error", {"message": "No se puede añadir el item al inventario"})
             return
-        emit("dm_give_item_success", {"player_id": target_player_id})
+        # Buscar SID del jugador objetivo
+        players = campaigns_dict[campaign_code]["players"]
+
+        target_sid = None
+        for p in players.values():
+            if p.get("character_uuid") == target_player_id:
+                target_sid = p.get("sid")
+                break
+
+        if not target_sid:
+            emit("error", {"message": "Jugador no conectado"})
+            return
+
+        emit(
+            "dm_give_item_success",
+            {"player_id": target_player_id},
+            to=target_sid
+        )
 
     @socketio.on("get_attacks")
     def get_attacks(data):
         character_uuid = data["character_uuid"]
         campaign_code = data["campaign_code"]
-
+        print(character_uuid)
         state = get_game_state(campaign_code)
-        character: Character = state.characters.get(character_uuid)
+        print(state.characters)
 
-        pass
+        character: Character = state.characters.get(UUID(character_uuid), None)
+        attack_data = character.get_attack()
+        emit("attack_recieved", attack_data)
+
     @socketio.on("start_combat")
     def start_combat(data):
         print(data)
@@ -678,6 +781,7 @@ def register_socket_handlers(
     
     @socketio.on("player_attack")
     def handle_attack(data):
+        print("a")
         state = get_game_state(data["campaig_code"])
         attack_command = AttackCommand(
             actor_id=data["character_id"],
@@ -687,7 +791,7 @@ def register_socket_handlers(
             disadvantage=data["disadvantage"]
         )
         result = AttackAction(attack_command).execute(state)
-        
+        print(result)
         socketio.emit("attack_result", result.payload)
 
         next_turn(state, data["character_id"])
@@ -699,5 +803,5 @@ def register_socket_handlers(
             socketio.emit("combat_finished")
             return
         current_actor = game_state.current_actor
-        socketio.emit("next_combatient", {"current_actor" : current_actor})
+        socketio.emit("next_combatient", {"current_actor" : str(current_actor)})
         return

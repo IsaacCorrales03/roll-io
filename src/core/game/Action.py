@@ -123,10 +123,17 @@ class AttackAction(Action):
             )
             state.dispatch(failed_event)
             return failed_event
-
+        print("actor_id", self.command.actor_id)
+        print("target_id", self.command.target_id)
+        print(state.enemies)
+        print(state.characters)
         attacker = state.get_actor(self.command.actor_id)
         target = state.get_actor(self.command.target_id)
-
+        print("attacker:", state.get_actor(self.command.actor_id))
+        print("Target: ", state.get_actor(self.command.target_id))
+        print("Combatientes: ")
+        for combatent in state.iter_combatants():
+            print(combatent)
         if attacker is None or target is None:
             failed_event = Event(
                 type="attack_failed",
@@ -237,7 +244,6 @@ class AttackAction(Action):
             is_proficient = weapon.proficiency_type in attacker.dnd_class.weapon_proficiencies
 
         proficiency_bonus = prof_bonus if is_proficient else 0
-        print(proficiency_bonus)
         attack_bonus = (
             getattr(weapon, "bonus", 0) + stat_mod + proficiency_bonus
         )   

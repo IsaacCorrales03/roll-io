@@ -1,0 +1,445 @@
+/* ================================
+   Chronicle20 — Enemy Creator CSS
+   Aesthetic: Dark Forge / Tactical RPG
+   Font: Cinzel (headers) + Crimson Text (body)
+   ================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+.token.targeted {
+    outline: 2px solid rgba(239, 68, 68, 0.85);
+    outline-offset: 3px;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.5);
+    animation: pulse-target 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-target {
+    0%, 100% { box-shadow: 0 0 14px rgba(239, 68, 68, 0.5); }
+    50%       { box-shadow: 0 0 24px rgba(239, 68, 68, 0.85); }
+}
+/* ── Tokens ───────────────────────────────── */
+:root {
+  --bg-void:     #080b12;
+  --bg-deep:     #0d1120;
+  --bg-card:     #121828;
+  --bg-input:    #0a0e1a;
+  --border:      rgba(255,255,255,0.07);
+  --border-glow: rgba(220,60,60,0.35);
+
+  --red-vivid:   #e03030;
+  --red-dim:     #8b1a1a;
+  --gold:        #c9963a;
+  --gold-pale:   #e8c87a;
+  --slate:       #8fa3bb;
+  --white:       #eef2f8;
+
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+
+  --shadow-card: 0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+  --shadow-glow: 0 0 30px rgba(220,60,60,0.25);
+}
+
+/* ── Base ─────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background-color: var(--bg-void);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(150,20,20,0.18) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  font-family: 'Crimson Text', Georgia, serif;
+  color: var(--white);
+  min-height: 100vh;
+}
+
+/* ── Section wrapper ──────────────────────── */
+.min-h-screen {
+  min-height: 100vh;
+  padding: 3rem 1.5rem;
+}
+
+.max-w-7xl {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* ── Outer glow card ──────────────────────── */
+.relative { position: relative; }
+
+.absolute.-inset-1 {
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, rgba(180,30,30,0.4), rgba(200,80,80,0.15), rgba(180,30,30,0.4));
+  border-radius: calc(var(--radius-lg) + 2px);
+  filter: blur(8px);
+  z-index: 0;
+}
+
+.relative.bg-slate-800\/50 {
+  position: relative;
+  z-index: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+/* ── Page title (if any) ──────────────────── */
+h1, h2 {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Tab Nav ──────────────────────────────── */
+.flex.border-b {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.3);
+}
+
+.tab-button {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  border: none;
+  background: transparent;
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--slate);
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s, background 0.2s;
+}
+
+.tab-button::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 20%; right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--red-vivid), transparent);
+  opacity: 0;
+  transition: opacity 0.2s, left 0.2s, right 0.2s;
+}
+
+.tab-button:hover {
+  color: var(--white);
+  background: rgba(255,255,255,0.03);
+}
+
+.tab-button.active {
+  color: var(--gold-pale);
+  background: rgba(200,50,50,0.08);
+}
+
+.tab-button.active::after {
+  opacity: 1;
+  left: 10%; right: 10%;
+}
+
+/* ── Tab Content ──────────────────────────── */
+.tab-content {
+  display: none;
+  animation: fadeIn 0.25s ease;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.tab-content.grid.active {
+  display: grid;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Tab inner padding ────────────────────── */
+.p-8 { padding: 2.5rem; }
+
+/* ── Labels ───────────────────────────────── */
+label {
+  display: block;
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.5rem;
+}
+
+/* ── Inputs ───────────────────────────────── */
+input[type="text"],
+input[type="number"],
+select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--bg-input);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  color: var(--white);
+  font-family: 'Crimson Text', serif;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  appearance: none;
+}
+
+input::placeholder { color: rgba(255,255,255,0.2); }
+
+input:focus,
+select:focus {
+  border-color: var(--red-vivid);
+  box-shadow: 0 0 0 3px rgba(220,48,48,0.15), 0 0 12px rgba(220,48,48,0.1);
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c9963a' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+
+/* ── File input ───────────────────────────── */
+input[type="file"] {
+  padding: 0.6rem;
+  border-style: dashed;
+  border-color: rgba(201,150,58,0.3);
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--slate);
+}
+
+input[type="file"]:hover {
+  border-color: var(--gold);
+  background: rgba(201,150,58,0.05);
+}
+
+/* ── Grid layouts ─────────────────────────── */
+.grid { display: grid; }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.gap-4 { gap: 1rem; }
+
+/* ── Space utilities ──────────────────────── */
+.space-y-6 > * + * { margin-top: 1.5rem; }
+.space-y-4 > * + * { margin-top: 1rem; }
+.space-y-2 > * + * { margin-top: 0.5rem; }
+
+/* ── Attribute inputs (Tab 2) ─────────────── */
+.attribute-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  color: var(--gold-pale);
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  appearance: none;
+}
+
+.attribute-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201,150,58,0.15);
+}
+
+#tab-attributes label {
+  color: var(--slate);
+  text-align: center;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+#tab-attributes > div {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  text-align: center;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+#tab-attributes > div:hover {
+  background: rgba(201,150,58,0.05);
+  border-color: rgba(201,150,58,0.25);
+}
+
+/* ── Radar chart container ────────────────── */
+#radar-chart-container {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+#radar-chart-container canvas {
+  max-width: 300px;
+}
+
+/* ── Attacks (Tab 3) ──────────────────────── */
+.attack-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  transition: border-color 0.2s;
+}
+
+.attack-item:hover { border-color: rgba(220,48,48,0.3); }
+
+.attack-item input {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.attack-item button {
+  padding: 0.5rem 0.75rem;
+  background: rgba(180,20,20,0.3);
+  border: 1px solid rgba(220,48,48,0.3);
+  border-radius: var(--radius-sm);
+  color: #f87171;
+  font-family: 'Cinzel', serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.attack-item button:hover {
+  background: rgba(220,48,48,0.4);
+  border-color: rgba(220,48,48,0.6);
+}
+
+/* Add attack button */
+button[onclick="addAttack()"] {
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  border: 1px dashed rgba(139,92,246,0.4);
+  border-radius: var(--radius-md);
+  color: #a78bfa;
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+button[onclick="addAttack()"]:hover {
+  background: rgba(139,92,246,0.1);
+  border-color: rgba(139,92,246,0.7);
+  color: #c4b5fd;
+}
+
+/* ── Preview (Tab 4) ──────────────────────── */
+#tab-preview {
+  text-align: center;
+}
+
+#enemy-preview {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 1rem;
+  border-radius: var(--radius-md);
+  border: 2px solid rgba(220,48,48,0.4);
+  background: rgba(0,0,0,0.4);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 24px rgba(220,48,48,0.2);
+}
+
+#enemy-preview img,
+#enemy-preview.has-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* empty state icon */
+#enemy-preview::before {
+  content: '⚔';
+  font-size: 3rem;
+  opacity: 0.2;
+}
+
+#enemy-preview:has(img)::before,
+#enemy-preview.has-image::before { display: none; }
+
+/* ── Invoke button ────────────────────────── */
+button[onclick="createEnemy()"] {
+  margin-top: 1.5rem;
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, var(--red-dim) 0%, var(--red-vivid) 50%, #c0392b 100%);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--white);
+  font-family: 'Cinzel', serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 20px rgba(220,48,48,0.4);
+}
+
+button[onclick="createEnemy()"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+}
+
+button[onclick="createEnemy()"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(220,48,48,0.55);
+}
+
+button[onclick="createEnemy()"]:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 12px rgba(220,48,48,0.35);
+}
+
+/* ── Utility ──────────────────────────────── */
+.text-center { text-align: center; }
+.text-sm { font-size: 0.85rem; }
+.text-lg { font-size: 1.2rem; }
+.font-bold { font-weight: 700; }
+.mt-6 { margin-top: 1.5rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.w-full { width: 100%; }
+
+.text-slate-400 { color: var(--slate); }
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 640px) {
+  .grid-cols-3 { grid-template-columns: repeat(2, 1fr); }
+  .attack-item { grid-template-columns: 1fr 1fr; }
+  .attack-item button { grid-column: span 2; }
+  .p-8 { padding: 1.25rem; }
+  .tab-button { font-size: 0.62rem; padding: 0.75rem 0.5rem; }
+}

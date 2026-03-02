@@ -12,7 +12,8 @@ let dm_player_list = [];
 let dm_enemies_list = [];
 let selectedCombatants = new Set();
 let selectedToken = null;
-
+let inCombat = false;
+let selectedTarget = null;
 /* ================================
    SOCKET.IO - CONEXIÓN
 ================================ */
@@ -79,6 +80,9 @@ window.onload = () => {
         // ── CORREGIDO: usar showPanel() para mostrar los paneles correctamente
         if (isDM) {
             showPanel('dm-panel', 'toggle-dm-panel');
+            if (Array.isArray(d.owner_enemies)) {
+                loadEnemyLibrary(d.owner_enemies);
+            }
         } else {
             showPanel('player-panel', 'toggle-player-panel');
             // El panel de combate es opcional para jugadores; mostrarlo siempre
@@ -150,12 +154,15 @@ window.onload = () => {
         const el = document.getElementById('char-ac');
         if (el) el.textContent = data.value || '--';
     });
-
+    socket.on("attack_recieved", data => {
+        renderAttack(data)
+    })
     socket.on("enemy_created", data => {
         if (document.querySelector(`[data-token-id="${data.id}"]`)) return;
         const token = createTokenElement(data);
         document.getElementById("tokens-container").appendChild(token);
         updateGridState(data.id, null, null, data.x, data.y);
+        socket.emit("get_entities", {campaign_code : campaignCode})
     });
 
     socket.on("tokens_sync", tokens => {
@@ -173,6 +180,13 @@ window.onload = () => {
         document.getElementById('char-ac').textContent = data.value || '--';
 
     });
+    socket.on("dm_give_item_success", d => {
+        console.log("item recibido")
+        socket.emit("get_character_data", {
+            campaign_code: campaignCode,
+            character_id: myCharacterId
+        })
+    })
     socket.on("character_data_received", c => {
         const nameEl = document.getElementById('char-name');
         if (nameEl) nameEl.textContent = c.name;
@@ -284,15 +298,18 @@ window.onload = () => {
         renderCharacterGearAndInventory(c);
     });
     socket.on("combat_started", d => {      
+        inCombat = true;
         if (isDM) {
             console.log("combat started but is DM")
-            showPanel('dm-panel', 'toggle-dm-panel');
         } else {
             console.log("combat started")
             hidePanel('player-panel', 'toggle-player-panel');
             showPanel('combat-panel', 'toggle-combat-panel')
+            socket.emit("get_attacks", {
+                campaign_code: campaignCode,
+                character_uuid: myCharacterId
+            })
         }
-
     })
 };
 
@@ -314,50 +331,92 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================================
    RENDER CHARACTER GEAR & INVENTORY
 ================================ */
+function renderItemActions(item) {
+    const type = item.meta.item_type;
+
+    const isEquipable = ["weapon", "armor", "shield"].includes(type);
+    const isConsumable = type === "consumable";
+    return `
+        <div class="item-actions">
+            ${
+                isEquipable
+                    ? item.equipped
+                        ? `<button class="item-btn btn-unequip"
+                            onclick="handleItemAction('unequip','${item.item_id}')">
+                            Desequipar
+                           </button>`
+                        : `<button class="item-btn btn-equip"
+                            onclick="handleItemAction('equip','${item.item_id}')">
+                            Equipar
+                           </button>`
+                    : isConsumable
+                        ? `<button class="item-btn btn-use"
+                            onclick="handleItemAction('use','${item.item_id}')">
+                            Usar
+                           </button>`
+                        : ""
+            }
+            <button class="item-btn btn-drop"
+                onclick="handleItemAction('drop','${item.instance_id}')">
+                Tirar
+            </button>
+        </div>
+    `;
+}
 function renderCharacterGearAndInventory(character) {
     const gearList = document.getElementById('gear-list');
     if (gearList) {
         gearList.innerHTML = `
             <li class="feature-item">
                 <div class="feature-name">Arma Principal</div>
-                <div class="feature-desc">${character.weapon?.name || "Sin arma equipada"}</div>
+                <div class="feature-desc">
+                    ${character.weapon?.name || "Sin arma equipada"}
+                </div>
             </li>
         `;
     }
 
     const inventoryList = document.getElementById('inventory-list');
     if (!inventoryList) return;
+
     inventoryList.innerHTML = '';
 
     if (!character.inventory?.length) {
-        inventoryList.innerHTML = '<li class="feature-item"><div class="feature-desc">Sin objetos en el inventario.</div></li>';
+        inventoryList.innerHTML = `
+            <li class="feature-item">
+                <div class="feature-desc">Sin objetos en el inventario.</div>
+            </li>`;
         return;
     }
 
     character.inventory.forEach(item => {
-        const type = item.meta.item_type?.toLowerCase() || '';
+        const type = (item.meta.item_type || '').toLowerCase();
+
         const li = document.createElement('li');
         li.className = 'feature-item item-card';
+
         li.innerHTML = `
             <div class="item-header">
                 <div class="feature-name">${item.meta.name}</div>
-                <div class="item-type-badge type-${type}">${item.meta.item_type}</div>
+                <div class="item-type-badge type-${type}">
+                    ${item.meta.item_type}
+                </div>
             </div>
-            <div class="feature-desc">${item.meta.description}</div>
+
+            <div class="feature-desc">
+                ${item.meta.description}
+            </div>
+
             <div class="item-meta">
                 <span>Cantidad: <strong>${item.quantity}</strong></span>
-                ${item.meta.weight ? `<span>Peso: <strong>${item.meta.weight} lb</strong></span>` : ''}
+                ${item.meta.weight 
+                    ? `<span>Peso: <strong>${item.meta.weight} lb</strong></span>` 
+                    : ''}
             </div>
-            <div class="item-actions">
-                ${item.equippable
-                ? item.equipped
-                    ? `<button class="item-btn btn-unequip" onclick="handleItemAction('equip','${item.instance_id}')">Desequipar</button>`
-                    : `<button class="item-btn btn-equip"   onclick="handleItemAction('equip','${item.instance_id}')">Equipar</button>`
-                : `<button class="item-btn btn-use" onclick="handleItemAction('use','${item.instance_id}')">Usar</button>`
-            }
-                <button class="item-btn btn-drop" onclick="handleItemAction('drop','${item.instance_id}')">Tirar</button>
-            </div>
+
+            ${renderItemActions(item)}
         `;
+
         inventoryList.appendChild(li);
     });
 }
@@ -367,8 +426,10 @@ function renderCharacterGearAndInventory(character) {
 ================================ */
 function createTokenElement(data) {
     const token = document.createElement("div");
+    console.log(data)
     token.className = "token enemy";
     token.dataset.tokenId = data.id;
+    token.dataset.enemyId = data.enemy_id ?? data.id;
     token.dataset.name = data.label ?? "";
     token.dataset.hp = data.hp ?? 0;
     token.dataset.maxHp = data.max_hp ?? 0;
@@ -432,9 +493,9 @@ function initializeGame() {
     if (isDM) {
         socket.emit("get_entities", { campaign_code: campaignCode });
         initializeGrid();
-        setupDMControls();
+        
     }
-
+    setupTokenControls();
     socket.emit("get_tokens", { campaign_code: campaignCode });
     hideLoader();
 }
@@ -665,6 +726,7 @@ document.getElementById('map-viewport').addEventListener('mouseleave', () => {
    ITEM ACTIONS
 ================================ */
 function handleItemAction(action, itemId) {
+    console.log(itemId)
     if (action === 'equip') {
         socket.emit("toggle_equip_item", { item_id: itemId, character_id: myCharacterId });
     } else if (action === 'use') {
@@ -711,110 +773,8 @@ function updateGridState(tokenId, oldX, oldY, newX, newY) {
     }
 }
 
-/* ================================
-   ATTACK BUILDER
-================================ */
-function parseDamageExpression(expr) {
-    const match = expr.match(/^(\d+)d(\d+)([+-]\d+)?$/i);
-    if (!match) return null;
-    return {
-        dice_count: parseInt(match[1]),
-        dice_size: parseInt(match[2]),
-        damage_bonus: match[3] ? parseInt(match[3]) : 0
-    };
-}
 
-function addAttack() {
-    const container = document.getElementById("attacks-container");
-    const div = document.createElement("div");
-    div.className = "attack-item";
-    div.innerHTML = `
-        <input type="text"   class="attack-name"        placeholder="Nombre del ataque">
-        <input type="number" class="attack-bonus"        placeholder="Bonus al ataque" value="0">
-        <input type="text"   class="attack-damage"       placeholder="Daño (ej: 1d6+2)">
-        <label>Tipo de ataque</label>
-        <select class="attack-category">
-            <option value="melee">Melee</option>
-            <option value="ranged">Ranged</option>
-        </select>
-        <label>Tipo de daño</label>
-        <select class="attack-damage-type">
-            <option value="slashing">Slashing</option>
-            <option value="piercing">Piercing</option>
-            <option value="bludgeoning">Bludgeoning</option>
-            <option value="fire">Fire</option>
-            <option value="cold">Cold</option>
-            <option value="poison">Poison</option>
-            <option value="necrotic">Necrotic</option>
-            <option value="radiant">Radiant</option>
-        </select>
-        <button type="button" onclick="removeAttack(this)">Eliminar</button>
-    `;
-    container.appendChild(div);
-}
 
-function removeAttack(button) { button.parentElement.remove(); }
-
-function collectAttacks() {
-    const attacks = [];
-    document.querySelectorAll(".attack-item").forEach(el => {
-        const name = el.querySelector(".attack-name")?.value.trim();
-        const bonus = parseInt(el.querySelector(".attack-bonus")?.value) || 0;
-        const damageExpr = el.querySelector(".attack-damage")?.value.trim();
-        const damageType = el.querySelector(".attack-damage-type")?.value;
-        if (!name || !damageExpr) return;
-        const parsed = parseDamageExpression(damageExpr);
-        if (!parsed) return;
-        attacks.push({ name, attack_bonus: bonus, ...parsed, damage_type: damageType });
-    });
-    return attacks;
-}
-
-async function createEnemy() {
-    const name = document.getElementById('enemy-name').value.trim();
-    const hp = parseInt(document.getElementById('enemy-hp').value);
-    const maxHp = parseInt(document.getElementById('enemy-max-hp').value);
-    const ac = parseInt(document.getElementById('enemy-ac').value) || 10;
-    const sizeVal = document.getElementById('enemy-size').value;
-    const fileInput = document.getElementById('enemy-asset');
-
-    const attributes = {
-        STR: parseInt(document.getElementById("enemy-str").value),
-        DEX: parseInt(document.getElementById("enemy-dex").value),
-        CON: parseInt(document.getElementById("enemy-con").value),
-        INT: parseInt(document.getElementById("enemy-int").value),
-        WIS: parseInt(document.getElementById("enemy-wis").value),
-        CHA: parseInt(document.getElementById("enemy-cha").value),
-    };
-
-    const attacks = collectAttacks();
-    if (!name || isNaN(hp) || isNaN(maxHp) || !fileInput.files.length || attacks.length === 0) return;
-
-    const formData = new FormData();
-    formData.append("file", fileInput.files[0]);
-
-    try {
-        const uploadRes = await fetch("/api/enemies/upload", { method: "POST", body: formData });
-        if (!uploadRes.ok) return;
-        const uploadData = await uploadRes.json();
-        if (!uploadData.success) return;
-
-        socket.emit("create_enemy", {
-            campaign_code: campaignCode,
-            name, hp, max_hp: maxHp, ac,
-            asset: uploadData.asset_url,
-            size: sizeVal.split('x').map(Number),
-            attributes, attacks
-        });
-
-        document.getElementById('enemy-name').value = "";
-        document.getElementById('enemy-hp').value = "";
-        document.getElementById('enemy-max-hp').value = "";
-        document.getElementById('enemy-asset').value = "";
-        document.getElementById('attacks-container').innerHTML = "";
-
-    } catch (err) { console.error("Error en upload:", err); }
-}
 
 /* ================================
    DM ENTITIES RENDER
@@ -877,7 +837,84 @@ function renderDMEntities(data) {
 
     renderCombatTab();
 }
+function loadEnemyLibrary(enemies) {
+    const container = document.getElementById('dm-enemy-library');
+    if (!container) return;
+    container.innerHTML = '';
 
+    if (!enemies?.length) {
+        container.innerHTML = '<p style="color:#666;font-family:\'IM Fell English\',serif;font-style:italic;">Sin enemigos disponibles. Crea algunos desde el dashboard.</p>';
+        return;
+    }
+
+    enemies.forEach(enemy => {
+        const div = document.createElement('div');
+        div.className = 'enemy-library-item';
+        div.style.cssText = `
+            display:flex; align-items:center; gap:10px;
+            padding:8px 10px;
+            background:rgba(139,26,26,0.08);
+            border:1px solid rgba(239,68,68,0.15);
+            border-radius:8px;
+            cursor:pointer;
+            transition:background 0.18s, border-color 0.18s;
+        `;
+
+        div.innerHTML = `
+            <div style="width:32px;height:32px;border-radius:5px;overflow:hidden;
+                        background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);
+                        flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                ${enemy.asset_url
+                    ? `<img src="${enemy.asset_url}" style="width:100%;height:100%;object-fit:contain;" draggable="false">`
+                    : `<span style="font-size:14px;opacity:0.4;">⚔</span>`
+                }
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-family:'Cinzel',serif;font-size:12px;font-weight:700;
+                            color:#e8d5b0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    ${enemy.name}
+                </div>
+                <div style="font-size:11px;color:#9a8060;margin-top:2px;">
+                    ❤ ${enemy.hp} · 🛡 ${enemy.ac}
+                </div>
+            </div>
+            <button onclick="event.stopPropagation(); invokeEnemy('${enemy.id}')"
+                style="flex-shrink:0;padding:4px 10px;
+                       background:linear-gradient(135deg,rgba(80,10,10,.9),rgba(139,26,26,.9));
+                       border:1px solid rgba(239,68,68,.35);color:#fca5a5;border-radius:6px;
+                       cursor:pointer;font-family:'Cinzel',serif;font-size:10px;font-weight:700;
+                       letter-spacing:1px;text-transform:uppercase;transition:all .18s ease;">
+                Invocar
+            </button>
+        `;
+
+        div.addEventListener('mouseenter', () => {
+            div.style.background = 'rgba(139,26,26,0.18)';
+            div.style.borderColor = 'rgba(239,68,68,0.35)';
+        });
+        div.addEventListener('mouseleave', () => {
+            div.style.background = 'rgba(139,26,26,0.08)';
+            div.style.borderColor = 'rgba(239,68,68,0.15)';
+        });
+
+        container.appendChild(div);
+    });
+}
+function invokeEnemy(enemyId) {
+    // Posición inicial: centro visible del mapa, o tile 0,0 como fallback
+    const centerTileX = Math.floor((mapViewport.clientWidth / 2 - mapPanX) / (TILE_SIZE * mapScale));
+    const centerTileY = Math.floor((mapViewport.clientHeight / 2 - mapPanY) / (TILE_SIZE * mapScale));
+
+    const x = Math.max(0, Math.min(centerTileX, GRID_COLS - 1));
+    const y = Math.max(0, Math.min(centerTileY, GRID_ROWS - 1));
+
+    socket.emit('invoke_enemy', {
+        campaign_code: campaignCode,
+        enemy_id: enemyId,
+        x,
+        y,
+    });
+}
 function renderCombatTab() {
     const container = document.getElementById("combat-selection-container");
     if (!container) return;
@@ -946,24 +983,31 @@ function startCombat() {
 /* ================================
    DM TOKEN CONTROLS
 ================================ */
-function setupDMControls() {
+function setupTokenControls() {
     document.addEventListener('click', e => {
         const token = e.target.closest('.token');
         if (token) {
             e.stopPropagation();
+
+            if (!isDM) {
+                handlePlayerTokenClick(token);
+                return;
+            }
+
             document.querySelectorAll('.token').forEach(t => t.classList.remove('selected'));
             selectedToken = token;
             token.classList.add('selected');
             return;
         }
-        if (selectedToken && !e.target.closest('.token')) {
+
+        if (isDM && selectedToken && !e.target.closest('.token')) {
             selectedToken.classList.remove('selected');
             selectedToken = null;
         }
     });
 
     function handleGridClick(e, canvas) {
-        if (!selectedToken) return;
+        if (!isDM || !selectedToken) return;
         e.stopPropagation();
         const rect = canvas.getBoundingClientRect();
         const tileX = Math.floor((e.clientX - rect.left) / (TILE_SIZE * mapScale));
@@ -1147,3 +1191,166 @@ function confirmGiveItem(targetCharId) {
 }
 
 function giveItemToPlayer(itemId, itemName) { openGiveItemPopup(itemId, itemName); }
+
+
+function renderAttack(data) {
+    if (!data) return;
+
+    const nameEl = document.querySelector(".attack-name");
+    if (nameEl) {
+        const typeTag = nameEl.querySelector(".attack-type-tag");
+        nameEl.childNodes[0].nodeValue = data.weapon_name + " ";
+        if (typeTag) {
+            typeTag.textContent = data.range && data.range > 2 ? "A Distancia" : "Cuerpo a Cuerpo";
+        }
+    }
+
+    const bonusEl = document.getElementById("atk1-bonus");
+    if (bonusEl) {
+        const value = data.attack_modifier ?? 0;
+        bonusEl.textContent = value >= 0 ? `+${value}` : `${value}`;
+    }
+
+    const damageEl = document.getElementById("atk1-damage");
+    if (damageEl) damageEl.textContent = data.damage;
+
+    const rangeEl = document.getElementById("atk1-range");
+    if (rangeEl) {
+        rangeEl.textContent = data.long_range
+            ? `${data.range}m / ${data.long_range}m`
+            : `${data.range}m`;
+    }
+
+    let attackBtn = document.getElementById("atk1-attack-btn");
+    if (!attackBtn) {
+        attackBtn = document.createElement("button");
+        attackBtn.id = "atk1-attack-btn";
+        attackBtn.textContent = "⚔ Atacar";
+        attackBtn.style.cssText = `
+            margin-top: 14px;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(80,10,10,.9), rgba(139,26,26,.9));
+            border: 1px solid rgba(239,68,68,.35);
+            border-radius: 8px;
+            color: #fca5a5;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-size: .85rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            transition: all .22s ease;
+            box-shadow: 0 4px 14px rgba(0,0,0,.5);
+        `;
+        attackBtn.addEventListener('mouseenter', () => {
+            attackBtn.style.background = 'linear-gradient(135deg, rgba(120,15,15,.95), rgba(180,30,30,.95))';
+            attackBtn.style.boxShadow = '0 6px 20px rgba(239,68,68,0.3)';
+        });
+        attackBtn.addEventListener('mouseleave', () => {
+            attackBtn.style.background = 'linear-gradient(135deg, rgba(80,10,10,.9), rgba(139,26,26,.9))';
+            attackBtn.style.boxShadow = '0 4px 14px rgba(0,0,0,.5)';
+        });
+
+        const parent = rangeEl?.parentElement ?? document.getElementById("combat-panel");
+        parent?.appendChild(attackBtn);
+    }
+
+    const freshBtn = document.getElementById("atk1-attack-btn");
+    freshBtn.replaceWith(freshBtn.cloneNode(true));
+    const btn = document.getElementById("atk1-attack-btn");
+
+    btn.addEventListener("click", () => {
+        const targetId = selectedTarget?.dataset?.tokenId ?? null;
+        if (!targetId) {
+            btn.textContent = "⚠ Selecciona un objetivo";
+            btn.style.color = "#fbbf24";
+            setTimeout(() => {
+                btn.textContent = "⚔ Atacar";
+                btn.style.color = "#fca5a5";
+            }, 1800);
+            return;
+        }
+        console.log(targetId)
+
+        socket.emit("player_attack", {
+            campaig_code: campaignCode,
+            character_id: myCharacterId,
+            target_id: targetId,
+            attack_mode: "normal",
+            advantage: false,
+            disadvantage: false
+        });
+    }); // ← cierra addEventListener
+}    // ← cierra renderAttack
+// Función nueva — manejo de selección de objetivo para jugadores
+function handlePlayerTokenClick(token) {
+    // Solo actúa si es jugador en combate
+    if (isDM || !inCombat) return;
+
+    const tokenId = token.dataset.tokenId;
+    const tokenName = token.dataset.name || "???";
+
+    // Deseleccionar el anterior
+    if (selectedTarget) {
+        selectedTarget.classList.remove("targeted");
+    }
+
+    // Si clickeas el mismo, lo deseleccionas
+    if (selectedTarget === token) {
+        selectedTarget = null;
+        updateTargetUI(null);
+        return;
+    }
+
+    selectedTarget = token;
+    token.classList.add("targeted");
+    updateTargetUI({ id: tokenId, name: tokenName });
+}
+
+function updateTargetUI(target) {
+    // Busca o crea el indicador de objetivo en el panel de combate
+    let targetEl = document.getElementById("combat-target-indicator");
+    if (!targetEl) {
+        targetEl = document.createElement("div");
+        targetEl.id = "combat-target-indicator";
+        targetEl.style.cssText = `
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            border-radius: 7px;
+            font-family: 'Cinzel', serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            text-align: center;
+            transition: all .2s ease;
+        `;
+        // Insertar antes del botón de atacar si existe, si no al inicio del panel
+        const attackBtn = document.getElementById("atk1-attack-btn");
+        const panel = document.getElementById("combat-panel");
+        if (attackBtn) attackBtn.before(targetEl);
+        else panel?.prepend(targetEl);
+    }
+
+    if (target) {
+        targetEl.textContent = `🎯 Objetivo: ${target.name}`;
+        targetEl.style.cssText += `
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.35);
+            color: #fca5a5;
+        `;
+    } else {
+        targetEl.textContent = "Sin objetivo seleccionado";
+        targetEl.style.cssText += `
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #6b7280;
+        `;
+    }
+}
+function quit_and_safe(){
+    socket.emit("save_and_exit", {
+        campaign_code: campaignCode
+    })
+}
